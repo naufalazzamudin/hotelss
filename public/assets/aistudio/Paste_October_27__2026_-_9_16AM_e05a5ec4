@@ -1,0 +1,734 @@
+# MASTER PROMPT — DEPARTMENTAL ASSET, MOTION ANALYTICS, BUG FIX & DASHBOARD REDESIGN
+
+Saya ingin mengembangkan aplikasi web yang sudah ada, yaitu **Hotel IT Inventory Management**, dengan menambahkan fitur Departmental Asset dan Motion Analytics, memperbaiki bug pada tabel Preloved, serta merapikan tampilan Dashboard.
+
+Implementasikan perubahan secara langsung pada kode proyek yang sedang terbuka di Google AI Studio.
+
+PENTING: Ini adalah pengembangan aplikasi yang sudah berjalan, bukan pembuatan aplikasi baru.
+
+==================================================
+A. INSTRUKSI WAJIB SEBELUM MENGUBAH KODE
+==================================================
+
+1. Pelajari struktur proyek yang sudah ada, termasuk frontend React/TypeScript, backend API, database, autentikasi, sistem role pengguna, Inventory, Master Items, Preloved, Monthly Data, Export Excel, Dashboard, komponen tabel, dan navigasi Sidebar.
+
+2. Gunakan arsitektur, komponen, API, sistem penyimpanan, serta gaya UI yang sudah digunakan proyek. Jangan mengganti teknologi atau database utama tanpa alasan teknis yang kuat.
+
+3. Pertahankan semua fitur yang sudah berjalan, termasuk Inventory, Master Items, Purchase Order, Preloved, login, manajemen pengguna, ekspor, dan fitur lainnya yang tidak berkaitan dengan perubahan ini.
+
+4. Jangan menghapus atau mereset data lama. Jika perlu menambahkan struktur database baru, lakukan migrasi yang aman dan kompatibel dengan data lama.
+
+5. Jangan membuat fitur hanya berupa UI. Semua tombol, form, pencarian, filter, perpindahan barang, pengembalian barang, laporan, dan ekspor harus benar-benar berfungsi melalui backend dan database.
+
+6. Sebelum implementasi, identifikasi bagaimana jumlah stok Inventory saat ini disimpan dan dihitung. Gunakan mekanisme stok yang sudah ada atau integrasikan secara konsisten. Jangan membuat sumber stok kedua yang tidak sinkron dengan Inventory.
+
+7. Setelah selesai, jalankan build, pemeriksaan TypeScript, dan pengujian yang tersedia. Perbaiki error yang muncul dan laporkan hasil pengujian secara jujur.
+
+==================================================
+B. FITUR BARU: DEPARTMENTAL ASSET
+==================================================
+
+Buat modul baru bernama **Departmental Asset** untuk memantau barang IT yang berada di masing-masing departemen hotel dan mencatat perpindahan barang dari Inventory ke departemen.
+
+Tambahkan Departmental Asset ke Sidebar dengan mengikuti desain dan struktur navigasi aplikasi yang sudah ada.
+
+Daftar departemen wajib berisi tujuh departemen berikut:
+
+1. Front Office
+2. House Keeping
+3. Engineering
+4. Human Resource
+5. Food & Beverage
+6. Sales & Marketing
+7. Accounting
+
+Gunakan nama departemen tersebut secara konsisten pada form, tabel, filter, histori, Monthly Data, dan Export Excel.
+
+### B1. Halaman utama Departmental Asset
+
+Tampilkan tujuh departemen dalam bentuk kartu atau daftar yang rapi, konsisten dengan UI aplikasi.
+
+Setiap kartu departemen dapat menampilkan:
+- Nama departemen.
+- Total jenis barang yang dimiliki.
+- Total unit barang yang saat ini berada di departemen.
+- Tombol atau area untuk membuka detail departemen.
+
+Ketika pengguna mengklik salah satu departemen, buka halaman detail khusus untuk departemen tersebut.
+
+Data setiap departemen harus terpisah dengan benar. Barang yang berada di Front Office tidak boleh otomatis muncul sebagai stok milik Engineering atau departemen lainnya.
+
+### B2. Tampilan detail departemen
+
+Di halaman setiap departemen, tampilkan barang berdasarkan tiga kategori utama berikut:
+
+- PC ITEM
+- NETWORK ITEM
+- CCTV & TV ITEM
+
+Urutan kategori harus konsisten.
+
+Alur navigasi:
+
+Departemental Asset → Pilih Departemen → Pilih Kategori → Lihat Barang.
+
+Kategori harus dapat diklik untuk membuka daftar barang di dalam kategori tersebut. Gunakan tampilan yang rapi, mudah dipahami, dan responsif.
+
+Pada daftar barang, tampilkan informasi yang diwariskan dari Inventory/Master Items:
+- Foto barang.
+- Nama barang.
+- Kategori.
+- Remark master item.
+- Jumlah unit yang sedang berada di departemen.
+
+Tambahkan informasi tambahan jika relevan:
+- Tanggal perpindahan terakhir.
+- Total unit yang pernah diterima.
+- Jumlah unit yang dikembalikan ke Inventory.
+
+Sediakan pencarian barang di dalam departemen dan kategori yang sedang dibuka.
+
+Jika tidak ada barang, tampilkan empty state yang jelas dan tombol Add Departmental Asset.
+
+Jangan membuat master barang baru dari halaman Departmental Asset. Barang harus selalu berasal dari Inventory/Master Items.
+
+==================================================
+C. TOMBOL ADD DEPARTMENTAL ASSET
+==================================================
+
+Tambahkan tombol **Add Departmental Asset** di Dashboard, tepat di dekat area ucapan selamat datang pengguna.
+
+Tombol ini harus terlihat jelas, tetapi tidak boleh membuat Dashboard menjadi penuh atau berantakan.
+
+Saat diklik, buka form atau modal untuk memindahkan barang dari Inventory ke departemen.
+
+Jika tombol diakses dari halaman departemen tertentu, departemen tersebut harus otomatis terpilih.
+
+Jika tombol diakses dari Dashboard, pengguna harus memilih departemen tujuan terlebih dahulu.
+
+### C1. Alur pemilihan barang
+
+Urutan form wajib sebagai berikut:
+
+1. Pilih Departemen Tujuan, jika belum ditentukan.
+2. Pilih Kategori Barang.
+3. Pilih Barang dari Inventory.
+
+Kategori yang tersedia:
+- PC ITEM
+- NETWORK ITEM
+- CCTV & TV ITEM
+
+Setelah kategori dipilih, dropdown barang hanya menampilkan barang yang sesuai dengan kategori tersebut.
+
+Dropdown barang harus memiliki:
+- Search berdasarkan nama barang.
+- Filter kategori.
+- Informasi nama barang dan kategori.
+- Jumlah stok yang tersedia di Inventory.
+- Penanganan loading, error, dan data kosong.
+- Hanya menampilkan barang yang masih memiliki stok tersedia.
+- Tidak menampilkan barang yang stoknya habis atau tidak aktif.
+
+Pengguna hanya boleh memilih satu jenis barang dalam satu transaksi. Jangan membuat form pemindahan massal yang memilih banyak jenis barang sekaligus.
+
+Gunakan ID master item sebagai identitas barang, bukan nama barang saja.
+
+### C2. Informasi barang setelah dipilih
+
+Setelah pengguna memilih barang, tampilkan ringkasan informasi barang secara otomatis:
+- Foto barang.
+- Nama barang.
+- Kategori.
+- Remark dari master item.
+- Stok tersedia di Inventory.
+- Stok yang saat ini berada di departemen tujuan, jika ada.
+
+Informasi tersebut hanya untuk ditampilkan dan tidak perlu diketik ulang.
+
+Foto, nama, kategori, dan remark harus mengikuti data Master Items/Inventory yang sudah ada.
+
+### C3. Kolom input perpindahan
+
+Setelah barang dipilih, tampilkan tiga kolom input:
+
+1. **Tanggal Dipindahkan** — wajib diisi dengan date picker.
+2. **Jumlah Barang yang Dipindahkan** — wajib diisi, bilangan bulat positif.
+3. **Remark Perpindahan** — opsional.
+
+Tambahkan tombol:
+- Confirm Transfer / Pindahkan Barang.
+- Cancel / Batal.
+
+Tampilkan konfirmasi sebelum menyimpan perpindahan jika sesuai dengan pola UI aplikasi.
+
+### C4. Validasi perpindahan
+
+Sebelum transaksi disimpan, validasi:
+- Departemen tujuan wajib valid.
+- Master item harus ada dan aktif.
+- Tanggal perpindahan valid.
+- Jumlah unit harus bilangan bulat positif.
+- Jumlah yang dipindahkan tidak boleh melebihi stok Inventory yang tersedia.
+- Tidak boleh ada transaksi ganda akibat tombol ditekan berulang kali.
+- Pengguna harus memiliki hak akses untuk melakukan perpindahan.
+
+Jika stok tidak mencukupi, tolak transaksi dan tampilkan pesan yang jelas.
+
+==================================================
+D. LOGIKA STOK INVENTORY DAN DEPARTMENTAL ASSET
+==================================================
+
+Bagian ini sangat penting. Implementasikan pergerakan stok secara nyata dan konsisten.
+
+Contoh:
+
+Stok Inventory ACCESS POINT RUIJIE sebelum perpindahan = 20 unit.
+
+Pengguna memindahkan 5 unit ke Front Office.
+
+Setelah transaksi berhasil:
+- Stok Inventory = 15 unit.
+- Stok Front Office bertambah 5 unit.
+- Tercipta satu histori perpindahan berisi 5 unit.
+- Histori mencatat tanggal, departemen tujuan, barang, pengguna, dan remark.
+
+Jika pengguna kemudian mengembalikan 2 unit dari Front Office ke Inventory:
+- Stok Inventory bertambah 2 unit.
+- Stok Front Office berkurang 2 unit.
+- Tercipta satu histori pengembalian sebanyak 2 unit.
+- Histori perpindahan awal tetap tersimpan dan tidak dihapus.
+
+Saldo akhir:
+- Inventory = 17 unit.
+- Front Office = 3 unit.
+
+Perhitungan ini hanya contoh.
+
+### D1. Aturan perhitungan stok
+
+Gunakan aturan berikut:
+
+Stok Departemen = Total unit yang dipindahkan ke departemen − Total unit yang dikembalikan ke Inventory − pengurangan stok departemen lain yang benar-benar didukung aplikasi.
+
+Stok Inventory harus memperhitungkan:
+- Penambahan stok dari transaksi Add Inventory.
+- Pengurangan stok dari perpindahan ke seluruh departemen.
+- Penambahan stok dari pengembalian barang.
+- Transaksi stok lain yang sudah ada dan memang memengaruhi saldo Inventory.
+
+Jangan menghitung pengembalian sebagai transaksi penambahan Inventory biasa yang menyebabkan barang terhitung dua kali. Pengembalian harus menjadi jenis transaksi tersendiri yang terhubung ke perpindahan asal.
+
+Jangan membuat saldo stok hanya berdasarkan angka yang dimasukkan manual oleh frontend.
+
+### D2. Transaksi stok harus aman
+
+Simpan perpindahan sebagai transaksi backend yang konsisten.
+
+Idealnya, pengurangan stok Inventory, penambahan stok departemen, dan pencatatan histori dilakukan sebagai satu operasi atomik.
+
+Jika database yang digunakan tidak mendukung transaksi atomik, gunakan mekanisme penguncian, validasi ulang, penulisan yang aman, atau pendekatan lain yang sesuai dengan backend agar:
+- Dua pengguna tidak dapat memindahkan stok yang sama melebihi saldo tersedia.
+- Data tidak hilang karena permintaan bersamaan.
+- Kegagalan sebagian tidak meninggalkan saldo yang tidak konsisten.
+- Pengulangan request tidak menggandakan perpindahan.
+
+Backend wajib memeriksa saldo terbaru ketika transaksi diproses.
+
+Jangan menyatakan transaksi berhasil sebelum backend mengonfirmasi bahwa penyimpanan selesai.
+
+==================================================
+E. FITUR PENGEMBALIAN BARANG KE INVENTORY
+==================================================
+
+Di halaman detail setiap departemen, sediakan aksi **Return to Inventory** atau **Kembalikan Barang ke Inventory**.
+
+Aksi ini digunakan untuk mengembalikan barang dari departemen ke stok Inventory.
+
+Ketika tombol diklik:
+1. Tampilkan barang yang saat ini tersedia di departemen tersebut.
+2. Pengguna memilih satu jenis barang.
+3. Tampilkan stok yang tersedia di departemen.
+4. Pengguna mengisi tanggal pengembalian.
+5. Pengguna mengisi jumlah unit yang ingin dikembalikan.
+6. Pengguna dapat mengisi remark pengembalian.
+7. Pengguna mengonfirmasi transaksi.
+
+Validasi:
+- Jumlah pengembalian harus bilangan bulat positif.
+- Jumlah tidak boleh melebihi stok yang sedang berada di departemen.
+- Barang harus benar-benar dimiliki departemen tersebut.
+- Pengembalian harus memiliki referensi ke barang dan departemen yang benar.
+- Pengguna harus memiliki hak akses yang sesuai.
+
+Setelah pengembalian berhasil:
+- Stok departemen berkurang.
+- Stok Inventory bertambah dengan jumlah yang sama.
+- Histori pengembalian tersimpan.
+- Data Departmental Asset, Dashboard, Monthly Data, dan Export Excel diperbarui sesuai kebutuhan.
+
+Jangan menghapus histori perpindahan awal.
+
+### E1. Histori pengembalian
+
+Setiap transaksi pengembalian minimal menyimpan:
+- ID transaksi.
+- ID perpindahan asal jika tersedia.
+- ID master item.
+- Departemen asal.
+- Tanggal pengembalian.
+- Jumlah unit yang dikembalikan.
+- Remark pengembalian.
+- Pengguna yang melakukan pengembalian.
+- Waktu pencatatan.
+
+Jika sebuah perpindahan awal berisi 10 unit dan pengguna mengembalikan 3 unit, sistem harus tetap dapat menunjukkan bahwa 7 unit masih berada di departemen dan 3 unit telah dikembalikan.
+
+Jangan mengizinkan total pengembalian kumulatif melebihi jumlah yang belum dikembalikan dari perpindahan asal.
+
+==================================================
+F. FITUR BARU: MOTION ANALYTICS
+==================================================
+
+Buat modul baru bernama **Motion Analytics** dan tambahkan ke Sidebar.
+
+Motion Analytics berfungsi sebagai pusat histori seluruh perpindahan dan pengembalian barang di semua departemen.
+
+Motion Analytics tidak perlu memiliki tombol khusus di Dashboard. Modul ini cukup tersedia melalui Sidebar dan integrasi laporan.
+
+### F1. Jenis aktivitas
+
+Tampilkan sekurang-kurangnya dua jenis transaksi:
+
+1. TRANSFER TO DEPARTMENT
+   Barang dipindahkan dari Inventory ke departemen.
+
+2. RETURN TO INVENTORY
+   Barang dikembalikan dari departemen ke Inventory.
+
+Gunakan label aktivitas yang jelas, dengan warna atau ikon yang membedakan kedua jenis transaksi secara konsisten dengan UI aplikasi.
+
+### F2. Kolom tabel Motion Analytics
+
+Tampilkan tabel histori dengan kolom:
+- Tanggal aktivitas.
+- Jenis aktivitas.
+- Nama barang.
+- Kategori barang.
+- Departemen terkait.
+- Jumlah unit.
+- Remark.
+- Dilakukan oleh.
+- Waktu pencatatan.
+
+Untuk transfer, departemen terkait adalah departemen penerima.
+
+Untuk pengembalian, departemen terkait adalah departemen asal pengembalian.
+
+Urutkan data berdasarkan tanggal aktivitas terbaru secara default.
+
+Jika terdapat banyak transaksi, gunakan pagination yang stabil atau mekanisme pemuatan data yang sesuai dengan aplikasi.
+
+### F3. Search dan filter
+
+Motion Analytics harus mendukung:
+- Search nama barang.
+- Filter departemen.
+- Filter kategori.
+- Filter jenis aktivitas.
+- Filter rentang tanggal.
+- Reset filter.
+
+Semua filter harus diterapkan secara konsisten pada data tabel dan data yang diekspor.
+
+Jangan hanya memfilter data yang sudah tampil di halaman jika backend memiliki lebih banyak data.
+
+==================================================
+G. MONTHLY DATA — DEPARTMENTAL ASSET
+==================================================
+
+Integrasikan laporan Departmental Asset ke bagian Monthly Data yang sudah ada.
+
+Jangan merusak laporan Inventory, Purchase Order, atau Preloved.
+
+Buat bagian atau tab laporan bernama **Monthly Departmental Asset**.
+
+### G1. Cara memilih laporan
+
+Alur wajib:
+1. Pilih departemen.
+2. Pilih bulan.
+3. Pilih tahun.
+4. Sistem menampilkan laporan Departmental Asset untuk departemen dan periode tersebut.
+
+Sediakan opsi pencarian barang dan filter kategori jika relevan.
+
+### G2. Isi laporan bulanan
+
+Laporan harus dapat menjawab barang apa saja yang berada di departemen pada periode yang dipilih.
+
+Tampilkan minimal:
+- Nama barang.
+- Kategori.
+- Foto jika sesuai dengan UI yang ada.
+- Remark barang.
+- Jumlah unit yang berada di departemen.
+- Jumlah unit yang diterima selama bulan tersebut.
+- Jumlah unit yang dikembalikan ke Inventory selama bulan tersebut.
+- Saldo akhir pada akhir periode yang dipilih.
+
+PENTING: Bedakan antara saldo pada akhir bulan dan aktivitas yang terjadi selama bulan tersebut.
+
+Saldo akhir bulan harus dihitung berdasarkan seluruh transaksi yang berlaku sampai akhir periode yang dipilih, bukan hanya transaksi yang terjadi di bulan itu.
+
+Jika suatu barang dipindahkan pada September dan tidak berubah selama Oktober, barang tersebut tetap harus muncul dalam laporan saldo Departmental Asset Oktober dengan saldo yang benar.
+
+Gunakan tanggal transaksi sebagai dasar perhitungan saldo historis. Jangan menggunakan saldo hari ini sebagai saldo bulan sebelumnya.
+
+Contoh:
+- September: 10 unit dipindahkan ke Engineering.
+- Oktober: 3 unit dikembalikan.
+- Laporan September harus menunjukkan saldo akhir 10 unit.
+- Laporan Oktober harus menunjukkan penerimaan 0 unit, pengembalian 3 unit, dan saldo akhir 7 unit.
+
+Pastikan hasil ini benar meskipun laporan dibuka setelah beberapa bulan berlalu.
+
+==================================================
+H. MONTHLY DATA — MOTION ANALYTICS
+==================================================
+
+Tambahkan bagian atau tab **Monthly Motion Analytics** pada Monthly Data.
+
+Berbeda dengan Monthly Departmental Asset, laporan ini menggabungkan semua departemen dalam satu laporan.
+
+Cara memilih:
+1. Pilih bulan.
+2. Pilih tahun.
+3. Tampilkan seluruh transaksi perpindahan dan pengembalian dari semua departemen pada periode tersebut.
+
+Tidak perlu mewajibkan pengguna memilih departemen.
+
+Kolom laporan:
+- Tanggal aktivitas.
+- Jenis aktivitas.
+- Nama barang.
+- Kategori.
+- Departemen terkait.
+- Jumlah unit.
+- Remark.
+- Dilakukan oleh.
+
+Tambahkan ringkasan:
+- Total transaksi perpindahan.
+- Total unit yang dipindahkan ke departemen.
+- Total transaksi pengembalian.
+- Total unit yang dikembalikan ke Inventory.
+
+Pastikan jumlah unit transfer dan return dihitung terpisah, bukan dijumlahkan menjadi satu angka yang menyesatkan.
+
+Gunakan tanggal aktivitas untuk menentukan bulan laporan.
+
+==================================================
+I. EXPORT EXCEL — DEPARTMENTAL ASSET
+==================================================
+
+Integrasikan **Export Departmental Asset** ke fitur Export Excel yang sudah ada.
+
+Laporan ini harus berdasarkan departemen yang dipilih.
+
+Alur:
+1. Pilih jenis laporan Departmental Asset.
+2. Pilih departemen.
+3. Pilih bulan/tahun jika ekspor ditujukan untuk laporan bulanan.
+4. Ekspor data.
+
+Sediakan setidaknya dua opsi jika sesuai dengan desain aplikasi:
+
+A. Current Departmental Asset
+Daftar saldo barang yang saat ini berada di departemen.
+
+B. Monthly Departmental Asset
+Laporan saldo akhir periode beserta jumlah penerimaan dan pengembalian selama periode tersebut.
+
+Kolom ekspor menyesuaikan isi laporan, termasuk:
+- Nama departemen.
+- Nama barang.
+- Kategori.
+- Remark.
+- Saldo unit.
+- Jumlah unit diterima.
+- Jumlah unit dikembalikan.
+- Periode laporan jika relevan.
+
+Jangan mencampur saldo saat ini dengan saldo historis akhir bulan.
+
+==================================================
+J. EXPORT EXCEL — MOTION ANALYTICS
+==================================================
+
+Integrasikan **Export Motion Analytics** ke fitur Export Excel yang sudah ada.
+
+Ekspor harus mencakup SEMUA DEPARTEMEN dalam satu file laporan, sesuai filter periode yang dipilih.
+
+Sediakan:
+- Export All Motion History.
+- Export Monthly Motion Analytics.
+
+Untuk ekspor bulanan, gunakan bulan dan tahun yang dipilih.
+
+Setiap transaksi harus berada pada baris terpisah. Jangan menggabungkan banyak aktivitas menjadi satu baris.
+
+Kolom:
+- Tanggal aktivitas.
+- Jenis aktivitas.
+- Nama barang.
+- Kategori.
+- Departemen terkait.
+- Jumlah unit.
+- Remark.
+- Pengguna.
+- Waktu pencatatan.
+
+Pastikan data Excel sesuai dengan filter dan data yang benar-benar tersimpan di database.
+
+Gunakan library ekspor Excel yang sudah digunakan proyek. Jangan merusak fitur Export Inventory, Export PO, dan Export Preloved.
+
+Jika aplikasi memiliki halaman pemilihan jenis ekspor, tambahkan kedua laporan ini tanpa mengubah perilaku laporan yang sudah ada.
+
+==================================================
+K. PERBAIKAN BUG: TABEL PRELOVED BERGETAR
+==================================================
+
+Saya menemukan bug pada aplikasi saat membuka data Preloved maupun Monthly Data Preloved. Tabel tampak bergetar, berkedip, bergerak naik-turun, atau terus melakukan render ulang.
+
+Perbaiki akar masalahnya, bukan hanya menyamarkan gejalanya.
+
+### K1. Investigasi yang harus dilakukan
+
+Periksa:
+- State React yang menyebabkan render berulang.
+- useEffect dengan dependency yang tidak stabil.
+- State yang diubah setiap render.
+- Fetch data yang berulang karena dependency berubah.
+- Pengurutan atau filtering yang menyebabkan referensi array berubah tanpa kebutuhan.
+- Pagination yang terus kembali ke halaman awal.
+- Perubahan tinggi tabel atau layout yang memicu pergeseran.
+- Key komponen tabel yang tidak stabil.
+- Animasi atau transisi CSS yang tidak diperlukan.
+- Komponen parent yang terus merender ulang dan memicu reset state tabel.
+- Loading state yang menyebabkan tabel muncul dan hilang berulang kali.
+- Logika sinkronisasi data yang terus memicu pembaruan state.
+
+### K2. Persyaratan perbaikan
+
+- Tabel Preloved harus stabil saat pertama kali dibuka.
+- Tabel Monthly Preloved harus stabil ketika bulan atau tahun diganti.
+- Pencarian dan filter tidak boleh menyebabkan flicker yang berulang.
+- Pagination harus tetap stabil.
+- Modal detail dan edit tidak boleh memicu reset tabel yang tidak diperlukan.
+- Loading hanya tampil saat benar-benar dibutuhkan.
+- Pertahankan seluruh fitur pencarian, filter, sorting, detail, edit, delete, dan ekspor yang sudah ada.
+- Jangan mengatasi bug dengan menonaktifkan fitur atau menghapus data.
+- Jangan menambahkan interval refresh atau polling yang tidak diperlukan.
+
+Gunakan React hooks, dependency, memoization, dan key komponen secara tepat jika memang dibutuhkan.
+
+Pastikan perbaikan tidak merusak Inventory, Purchase Order, dan tabel lain.
+
+==================================================
+L. RAPikan DASHBOARD
+==================================================
+
+Saya ingin Dashboard lebih bersih, profesional, rapi, dan responsif.
+
+### L1. Hapus bagian Aktivitas Cepat
+
+Hapus seluruh bagian **Aktivitas Cepat / Quick Actions** yang berisi pintasan seperti:
+- Export Data Inventory.
+- Export data lainnya.
+- Kelola Pengguna / Kelola Akun.
+- Pintasan aktivitas cepat lainnya yang saat ini mempersempit area Dashboard.
+
+Jangan menghapus fitur-fitur tersebut dari aplikasi. Hapus hanya panel pintasan dari Dashboard. Fitur aslinya harus tetap tersedia melalui navigasi atau halaman masing-masing.
+
+### L2. Tombol Add Departmental Asset
+
+Tambahkan tombol Add Departmental Asset di dekat ucapan selamat datang pengguna.
+
+Tombol harus:
+- Mudah ditemukan.
+- Tidak mendominasi halaman.
+- Mengikuti gaya desain aplikasi.
+- Berfungsi membuka form pemindahan barang.
+- Responsif pada desktop, tablet, dan ponsel.
+
+Jangan menambahkan tombol Motion Analytics ke Dashboard.
+
+### L3. Desain ulang kartu statistik
+
+Rapikan kartu statistik berikut:
+- Master Items.
+- Total Unit Tersedia.
+- PC ITEM.
+- NETWORK ITEM.
+- CCTV & TV ITEM.
+- ADDED THIS MONTH.
+
+Tampilkan sebagai kartu statistik besar yang rapi, mudah dibaca, dan responsif.
+
+Persyaratan desain:
+- Gunakan layout grid responsif.
+- Ukuran kartu konsisten.
+- Angka utama terlihat jelas.
+- Label statistik tidak terpotong.
+- Spasi, padding, ikon, dan alignment konsisten.
+- Gunakan warna dan gaya yang sudah selaras dengan aplikasi.
+- Hindari kartu terlalu sempit atau teks bertumpuk.
+- Pastikan layout tetap nyaman pada layar kecil.
+- Jangan membuat keseluruhan Dashboard terlalu panjang atau penuh.
+
+Gunakan CSS Grid atau Flexbox sesuai pola proyek yang sudah ada.
+
+### L4. Semua kartu statistik dapat diklik
+
+Setiap kartu statistik harus menjadi navigasi aktif menuju data yang sesuai.
+
+Pemetaan:
+- Master Items → halaman Master Items dengan daftar master barang.
+- Total Unit Tersedia → halaman Inventory dengan seluruh barang dan saldo unit.
+- PC ITEM → Inventory yang difilter ke kategori PC ITEM.
+- NETWORK ITEM → Inventory yang difilter ke kategori NETWORK ITEM.
+- CCTV & TV ITEM → Inventory yang difilter ke kategori CCTV & TV ITEM.
+- ADDED THIS MONTH → Monthly Data Inventory pada bulan dan tahun berjalan.
+
+Jika filter kategori atau periode sudah tersedia di halaman tujuan, gunakan filter tersebut melalui state atau mekanisme navigasi yang sesuai dengan arsitektur proyek.
+
+Jangan hanya mengubah tampilan kartu atau menampilkan modal kosong. Kartu harus benar-benar membawa pengguna ke data yang relevan.
+
+Statistik harus berasal dari data backend/database yang benar.
+
+Pastikan perhitungan:
+- Master Items = jumlah master item sesuai definisi status aktif yang digunakan aplikasi.
+- Total Unit Tersedia = total saldo unit yang tersedia di Inventory, bukan jumlah jenis barang.
+- Statistik kategori = total unit atau jumlah jenis barang sesuai definisi statistik yang sudah digunakan; pertahankan makna yang konsisten dan tampilkan label yang jelas.
+- ADDED THIS MONTH = total unit yang ditambahkan melalui transaksi Add Inventory pada bulan berjalan, bukan total stok saat ini.
+
+Jangan mencampur master item, jumlah unit, jumlah transaksi, dan total penambahan bulanan dalam satu metrik.
+
+==================================================
+M. KONSISTENSI UI, DATA, DAN NAVIGASI
+==================================================
+
+Semua fitur baru harus mengikuti gaya UI aplikasi yang sudah ada.
+
+Pastikan:
+- Sidebar memiliki Departmental Asset dan Motion Analytics.
+- Departmental Asset dapat dibuka dari Sidebar.
+- Add Departmental Asset tersedia di Dashboard dan halaman departemen.
+- Motion Analytics tersedia melalui Sidebar.
+- Monthly Data menyediakan laporan Departmental Asset dan Motion Analytics.
+- Export Excel menyediakan laporan Departmental Asset dan Motion Analytics.
+- Data barang pada Departmental Asset selalu mengacu pada Master Items/Inventory.
+- Stok Inventory dan saldo departemen selalu konsisten.
+- Histori transaksi tidak hilang ketika master item diedit.
+- Semua filter dan laporan menggunakan sumber data yang sama dan benar.
+- Tidak ada tombol tanpa fungsi.
+- Tidak ada tautan menuju halaman kosong.
+- Semua modal dapat dibuka dan ditutup dengan benar.
+- Loading, error, success, dan empty state ditangani secara konsisten.
+
+Jika proyek menggunakan permission atau role pengguna, ikuti aturan yang sudah ada dan terapkan validasi di backend.
+
+==================================================
+N. PERSYARATAN DATABASE DAN BACKEND
+==================================================
+
+Pelajari database dan API yang digunakan sebelum membuat struktur baru.
+
+Implementasikan model data yang diperlukan untuk:
+- Departemen.
+- Penempatan barang pada departemen.
+- Transaksi perpindahan dari Inventory ke departemen.
+- Transaksi pengembalian dari departemen ke Inventory.
+- Histori pengguna dan tanggal transaksi.
+
+Jika daftar departemen bersifat tetap, gunakan daftar resmi tujuh departemen di atas sebagai data referensi yang konsisten.
+
+Gunakan ID master item sebagai relasi utama.
+
+Setiap transaksi setidaknya menyimpan:
+- ID unik transaksi.
+- ID master item.
+- Jenis transaksi.
+- Departemen terkait.
+- Tanggal aktivitas.
+- Jumlah unit.
+- Remark.
+- ID pengguna.
+- Waktu pencatatan.
+- Referensi transaksi asal jika berupa pengembalian.
+
+Jangan menghapus histori lama saat memperbarui saldo.
+
+Jika proyek menggunakan JSON file sebagai database, periksa mekanisme baca/tulis dan pastikan penulisan data aman terhadap permintaan bersamaan. Jika menggunakan database relasional atau database lain, ikuti mekanisme transaksi yang sesuai dengan sistem tersebut.
+
+Jangan memasukkan secret key atau kredensial server ke frontend.
+
+==================================================
+O. PENGUJIAN WAJIB
+==================================================
+
+Setelah implementasi, uji semua skenario berikut:
+
+1. Ketujuh departemen muncul dengan benar.
+2. Setiap departemen dapat dibuka.
+3. Barang ditampilkan berdasarkan kategori yang dipilih.
+4. Search dan filter dropdown Inventory berfungsi.
+5. Pengguna dapat memindahkan satu jenis barang ke departemen.
+6. Stok Inventory berkurang sesuai jumlah yang dipindahkan.
+7. Saldo departemen bertambah sesuai jumlah yang dipindahkan.
+8. Sistem menolak perpindahan yang melebihi stok tersedia.
+9. Pengguna dapat mengembalikan sebagian unit barang.
+10. Pengembalian mengurangi saldo departemen dan menambah stok Inventory.
+11. Sistem menolak pengembalian melebihi jumlah yang masih berada di departemen.
+12. Histori transfer dan return tersimpan secara terpisah.
+13. Motion Analytics menampilkan aktivitas seluruh departemen.
+14. Monthly Departmental Asset menghitung saldo akhir historis dengan benar.
+15. Monthly Motion Analytics menampilkan transaksi semua departemen sesuai bulan.
+16. Export Departmental Asset menghasilkan laporan departemen yang dipilih.
+17. Export Motion Analytics menggabungkan transaksi semua departemen.
+18. File Excel sesuai dengan filter dan data database.
+19. Tabel Preloved tidak lagi bergetar.
+20. Tabel Monthly Preloved tidak lagi bergetar saat filter bulan/tahun berubah.
+21. Dashboard tidak lagi menampilkan Quick Actions.
+22. Kartu statistik tampil rapi dan responsif.
+23. Seluruh kartu statistik dapat diklik dan menuju data yang tepat.
+24. Tombol Add Departmental Asset di Dashboard berfungsi.
+25. Data tetap benar setelah reload halaman.
+26. Transaksi bersamaan tidak menyebabkan saldo negatif atau data hilang.
+27. Fitur Inventory, Purchase Order, Preloved, autentikasi, dan ekspor lama tetap berfungsi.
+
+Jangan menyatakan pengujian berhasil jika hanya berdasarkan pemeriksaan kode tanpa menjalankan pengujian yang tersedia.
+
+==================================================
+P. HASIL AKHIR YANG DIHARAPKAN
+==================================================
+
+Implementasikan perubahan secara menyeluruh, termasuk frontend, backend, database, navigasi, perhitungan saldo, laporan, dan ekspor.
+
+Setelah selesai, berikan ringkasan:
+1. File yang ditambahkan dan diubah.
+2. Perubahan API dan struktur database.
+3. Cara kerja perpindahan dan pengembalian barang.
+4. Cara kerja saldo historis Monthly Departmental Asset.
+5. Cara kerja Motion Analytics dan Export Excel.
+6. Penyebab bug tabel Preloved dan perbaikan yang diterapkan.
+7. Perubahan desain Dashboard.
+8. Hasil build dan pengujian.
+9. Migrasi atau konfigurasi tambahan yang diperlukan.
+
+Prioritas tertinggi adalah menjaga integritas stok dan histori transaksi.
+
+Jangan hanya memberikan saran, mockup, atau contoh kode. Terapkan perubahan pada proyek yang sedang terbuka, gunakan kode yang benar-benar digunakan aplikasi, dan pastikan semua fitur terhubung ke database/backend.
+
+Jika ada bagian yang tidak dapat diimplementasikan dengan aman karena keterbatasan struktur database atau arsitektur saat ini, jelaskan kendalanya dan gunakan solusi yang kompatibel tanpa menghilangkan data lama.
