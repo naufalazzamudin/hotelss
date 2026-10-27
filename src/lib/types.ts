@@ -32,7 +32,10 @@ export interface StockTransaction {
 
 // Unified Inventory Summary Item (Displayed in Inventory View)
 export interface InventorySummaryItem extends MasterItem {
-  totalQuantity: number; // Sum of inbound transactions
+  totalQuantity: number; // Available quantity in inventory (Inbound - Transferred + Returned)
+  totalInboundQuantity?: number;
+  totalTransferredQuantity?: number;
+  totalReturnedQuantity?: number;
   transactionCount: number; // Count of inbound transactions
   lastTransactionDate?: string | null;
   lastTransactionBy?: string | null;
@@ -186,4 +189,75 @@ export type RecentItem = {
   type: 'INVENTORY' | 'PURCHASE ORDER' | 'PRELOVED';
   item: InventoryItem | PurchaseOrderItem | PrelovedItem;
 };
+
+// 7 Official Hotel Departments
+export type DepartmentName =
+  | 'Front Office'
+  | 'House Keeping'
+  | 'Engineering'
+  | 'Human Resource'
+  | 'Food & Beverage'
+  | 'Sales & Marketing'
+  | 'Accounting';
+
+export const DEPARTMENTS: DepartmentName[] = [
+  'Front Office',
+  'House Keeping',
+  'Engineering',
+  'Human Resource',
+  'Food & Beverage',
+  'Sales & Marketing',
+  'Accounting'
+];
+
+export type MovementType = 'TRANSFER_TO_DEPARTMENT' | 'RETURN_TO_INVENTORY';
+
+export interface DepartmentMovement {
+  id: string;
+  itemId: string; // References MasterItem.id
+  department: DepartmentName;
+  type: MovementType;
+  quantity: number; // Positive integer
+  date: string; // YYYY-MM-DD
+  remark?: string | null;
+  createdBy: string;
+  createdAt: string; // ISO 8601
+}
+
+export interface EnrichedMotionRecord extends DepartmentMovement {
+  itemName: string;
+  category: Category;
+  photoUrl?: string | null;
+  masterRemark?: string | null;
+}
+
+export interface DepartmentAssetItem {
+  itemId: string;
+  itemName: string;
+  category: Category;
+  photoUrl?: string | null;
+  masterRemark?: string | null;
+  currentUnits: number; // received - returned
+  totalReceived: number;
+  totalReturned: number;
+  lastTransferDate?: string | null;
+  lastTransferBy?: string | null;
+}
+
+export interface DepartmentSummary {
+  name: DepartmentName;
+  totalJenis: number;
+  totalUnits: number;
+}
+
+export interface MonthlyDepartmentalReportItem {
+  itemId: string;
+  itemName: string;
+  category: Category;
+  photoUrl?: string | null;
+  masterRemark?: string | null;
+  unitsReceivedThisMonth: number;
+  unitsReturnedThisMonth: number;
+  closingBalance: number;
+}
 

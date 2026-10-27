@@ -14,7 +14,10 @@ import {
   X,
   Plus,
   Sparkles,
-  PackagePlus
+  PackagePlus,
+  Building2,
+  TrendingUp,
+  ArrowRightLeft
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -22,15 +25,21 @@ export type NavTab =
   | 'dashboard'
   | 'inventory'
   | 'create-item'
+  | 'departmental-asset'
+  | 'motion-analytics'
   | 'pc'
   | 'network'
   | 'cctv'
   | 'po'
   | 'preloved'
   | 'monthly-inventory'
+  | 'monthly-departmental'
+  | 'monthly-motion'
   | 'monthly-po'
   | 'monthly-preloved'
   | 'export-inventory'
+  | 'export-departmental'
+  | 'export-motion'
   | 'export-po'
   | 'export-preloved'
   | 'users'
@@ -61,14 +70,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'inventory', label: 'Inventory', icon: Boxes },
     { id: 'create-item', label: 'Create Item', icon: PackagePlus },
+    { id: 'departmental-asset', label: 'Departmental Asset', icon: Building2 },
+    { id: 'motion-analytics', label: 'Motion Analytics', icon: TrendingUp },
     { id: 'po', label: 'Purchase Order Data', icon: ShoppingCart },
     { id: 'preloved', label: 'Preloved Data', icon: Sparkles },
     { type: 'divider', label: 'MONTHLY DATA' },
     { id: 'monthly-inventory', label: 'Monthly Data Inventory', icon: Calendar },
+    { id: 'monthly-departmental', label: 'Monthly Departmental Asset', icon: Calendar },
+    { id: 'monthly-motion', label: 'Monthly Motion Analytics', icon: Calendar },
     { id: 'monthly-po', label: 'Monthly Data Purchase Order', icon: Calendar },
     { id: 'monthly-preloved', label: 'Monthly Data Preloved', icon: Calendar },
     { type: 'divider', label: 'EXPORT DATA' },
     { id: 'export-inventory', label: 'Export Data Inventory', icon: FileSpreadsheet },
+    { id: 'export-departmental', label: 'Export Departmental Asset', icon: FileSpreadsheet },
+    { id: 'export-motion', label: 'Export Motion Analytics', icon: FileSpreadsheet },
     { id: 'export-po', label: 'Export Data Purchase Order', icon: FileSpreadsheet },
     { id: 'export-preloved', label: 'Export Data Preloved', icon: FileSpreadsheet },
     { type: 'divider', label: 'SYSTEM' },

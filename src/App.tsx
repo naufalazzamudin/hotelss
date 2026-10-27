@@ -27,6 +27,12 @@ import { DeleteConfirmModal } from './components/DeleteConfirmModal';
 import { ImageViewerModal } from './components/ImageViewerModal';
 import { SecretCodeModal } from './components/SecretCodeModal';
 import { ToastContainer, ToastMessage } from './components/Toast';
+import { DepartmentalAssetView } from './components/DepartmentalAssetView';
+import { MotionAnalyticsView } from './components/MotionAnalyticsView';
+import { MonthlyDepartmentalView } from './components/MonthlyDepartmentalView';
+import { MonthlyMotionView } from './components/MonthlyMotionView';
+import { TransferDepartmentModal } from './components/TransferDepartmentModal';
+import { ReturnDepartmentModal } from './components/ReturnDepartmentModal';
 import type {
   InventoryItem,
   MasterItem,
@@ -39,7 +45,8 @@ import type {
   FilterOptions,
   POFilterOptions,
   POStatus,
-  Category
+  Category,
+  DepartmentName
 } from './lib/types';
 import type { UnifiedRecentItem } from './components/RecentlyEditedSection';
 import {
@@ -142,6 +149,14 @@ const AppContent: React.FC = () => {
 
   const [isDeleting, setIsDeleting] = useState(false);
   const [previewImage, setPreviewImage] = useState<{ url: string; title: string } | null>(null);
+
+  // Modals - Department Asset Transfer & Return
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  const [transferPreselectedDept, setTransferPreselectedDept] = useState<DepartmentName | undefined>(undefined);
+  const [transferPreselectedItemId, setTransferPreselectedItemId] = useState<string | undefined>(undefined);
+  const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
+  const [returnDept, setReturnDept] = useState<DepartmentName>('Front Office');
+  const [returnPreselectedItemId, setReturnPreselectedItemId] = useState<string | undefined>(undefined);
 
   // Secret code modal for in-app User Management tab
   const [isSecretModalOpenForTab, setIsSecretModalOpenForTab] = useState(false);
@@ -480,6 +495,11 @@ const AppContent: React.FC = () => {
               onOpenAddPOModal={handleOpenAddPO}
               onOpenAddPrelovedModal={() => handleOpenAddPreloved()}
               onNavigateTab={handleSelectTab}
+              onOpenTransferModal={() => {
+                setTransferPreselectedDept(undefined);
+                setTransferPreselectedItemId(undefined);
+                setIsTransferModalOpen(true);
+              }}
             />
           )}
 
@@ -522,6 +542,32 @@ const AppContent: React.FC = () => {
           {currentTab === 'create-item' && (
             <MasterItemsView
               onAddStockForItem={(item) => handleOpenAddStockForItem(item)}
+            />
+          )}
+
+          {/* 2c. Departmental Asset Management */}
+          {currentTab === 'departmental-asset' && (
+            <DepartmentalAssetView
+              onOpenTransferModal={(dept, itemId) => {
+                setTransferPreselectedDept(dept);
+                setTransferPreselectedItemId(itemId);
+                setIsTransferModalOpen(true);
+              }}
+              onOpenReturnModal={(dept, itemId) => {
+                setReturnDept(dept);
+                setReturnPreselectedItemId(itemId);
+                setIsReturnModalOpen(true);
+              }}
+              onViewImage={(url, title) => setPreviewImage({ url, title })}
+              onToast={addToast}
+            />
+          )}
+
+          {/* 2d. Motion Analytics */}
+          {currentTab === 'motion-analytics' && (
+            <MotionAnalyticsView
+              onToast={addToast}
+              onViewImage={(url, title) => setPreviewImage({ url, title })}
             />
           )}
 
@@ -653,9 +699,35 @@ const AppContent: React.FC = () => {
             />
           )}
 
+          {/* 5c. Monthly Departmental Asset */}
+          {currentTab === 'monthly-departmental' && (
+            <MonthlyDepartmentalView
+              onToast={addToast}
+              onViewImage={(url, title) => setPreviewImage({ url, title })}
+            />
+          )}
+
+          {/* 5d. Monthly Motion Analytics */}
+          {currentTab === 'monthly-motion' && (
+            <MonthlyMotionView
+              onToast={addToast}
+              onViewImage={(url, title) => setPreviewImage({ url, title })}
+            />
+          )}
+
           {/* 6. Export Data Inventory */}
           {currentTab === 'export-inventory' && (
             <ExportDataView onToast={addToast} />
+          )}
+
+          {/* 6b. Export Departmental Asset */}
+          {currentTab === 'export-departmental' && (
+            <ExportDataView defaultType="department" onToast={addToast} />
+          )}
+
+          {/* 6c. Export Motion Analytics */}
+          {currentTab === 'export-motion' && (
+            <ExportDataView defaultType="motion" onToast={addToast} />
           )}
 
           {/* 7. Export Data Purchase Order */}
@@ -812,6 +884,39 @@ const AppContent: React.FC = () => {
           setIsSecretModalOpenForTab(false);
           setCurrentTab('users');
         }}
+      />
+
+      {/* Transfer to Department Modal */}
+      <TransferDepartmentModal
+        isOpen={isTransferModalOpen}
+        preselectedDepartment={transferPreselectedDept}
+        preselectedItemId={transferPreselectedItemId}
+        onClose={() => {
+          setIsTransferModalOpen(false);
+          setTransferPreselectedDept(undefined);
+          setTransferPreselectedItemId(undefined);
+        }}
+        onSuccess={() => {
+          refreshDashboardData();
+          loadInventoryItems();
+        }}
+        onToast={addToast}
+      />
+
+      {/* Return from Department to Inventory Modal */}
+      <ReturnDepartmentModal
+        isOpen={isReturnModalOpen}
+        department={returnDept}
+        preselectedItemId={returnPreselectedItemId}
+        onClose={() => {
+          setIsReturnModalOpen(false);
+          setReturnPreselectedItemId(undefined);
+        }}
+        onSuccess={() => {
+          refreshDashboardData();
+          loadInventoryItems();
+        }}
+        onToast={addToast}
       />
 
       {/* Global Toast Notifications */}

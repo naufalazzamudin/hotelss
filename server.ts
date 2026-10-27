@@ -15,8 +15,15 @@ import type {
   MasterItem,
   StockTransaction,
   InventorySummaryItem,
-  MonthlyStockTransaction
+  MonthlyStockTransaction,
+  DepartmentName,
+  DepartmentMovement,
+  EnrichedMotionRecord,
+  DepartmentAssetItem,
+  DepartmentSummary,
+  MonthlyDepartmentalReportItem
 } from './src/lib/types';
+import { DEPARTMENTS } from './src/lib/types';
 import {
   isDateRepairedInMonth,
   parseMonthFilter,
@@ -59,6 +66,7 @@ interface DBData {
   purchaseOrders: PurchaseOrderItem[];
   preloved: PrelovedItem[];
   activities: ActivityRecord[];
+  departmentMovements?: DepartmentMovement[];
 }
 
 // Helper to create sample SVG placeholder images
@@ -129,7 +137,7 @@ function initDB(): DBData {
         }
 
         // Keep parsed.inventory in sync
-        parsed.inventory = buildInventorySummaries(parsed.masterItems, parsed.stockTransactions);
+        parsed.inventory = buildInventorySummaries(parsed.masterItems, parsed.stockTransactions, parsed.departmentMovements);
         return parsed;
       }
     } catch (e) {
@@ -1296,6 +1304,18 @@ app.get('/api/inventory/stats', requireAuth, (req: Request, res: Response) => {
       addedThisMonth += (Number(tx.quantity) || 0);
     }
   }
+
+  // Factor in movements to/from departments
+  for (const mov of dbCache.departmentMovements || []) {
+    if (activeIds.has(mov.itemId)) {
+      if (mov.type === 'TRANSFER_TO_DEPARTMENT') {
+        totalUnits -= (Number(mov.quantity) || 0);
+      } else if (mov.type === 'RETURN_TO_INVENTORY') {
+        totalUnits += (Number(mov.quantity) || 0);
+      }
+    }
+  }
+  totalUnits = Math.max(0, totalUnits);
 
   res.json({
     total: activeMasters.length,
@@ -2761,6 +2781,853 @@ app.get('/api/export/excel-preloved', requireAuth, async (req: Request, res: Res
   } catch (error) {
     console.error('Preloved Excel export error:', error);
     res.status(500).json({ error: 'Failed to generate Preloved Excel file.' });
+  }
+});
+
+// ==========================================
+// DEPARTMENTAL ASSET & MOTION ANALYTICS ROUTES
+// ==========================================
+
+// 19. Get Department Summaries (7 official departments)
+app.get('/api/departments', requireAuth, (req: Request, res: Response) => {
+  const summaries: DepartmentSummary[] = DEPARTMENTS.map((deptName) => {
+    const deptMovs = (dbCache.departmentMovements || []).filter((m) => m.department === deptName);
+    const itemBalances = new Map<string, number>();
+
+    for (const m of deptMovs) {
+      const cur = itemBalances.get(m.itemId) || 0;
+      if (m.type === 'TRANSFER_TO_DEPARTMENT') {
+        itemBalances.set(m.itemId, cur + (Number(m.quantity) || 0));
+      } else if (m.type === 'RETURN_TO_INVENTORY') {
+        itemBalances.set(m.itemId, cur - (Number(m.quantity) || 0));
+      }
+    }
+
+    let totalJenis = 0;
+    let totalUnits = 0;
+    for (const [_, units] of itemBalances) {
+      if (units > 0) {
+        totalJenis++;
+        totalUnits += units;
+      }
+    }
+
+    return {
+      name: deptName,
+      totalJenis,
+      totalUnits
+    };
+  });
+
+  res.json({ data: summaries });
+});
+
+// 20. Get Department Items (List of items with current stock & history for a department)
+app.get('/api/departments/:name/items', requireAuth, (req: Request, res: Response) => {
+  const deptName = req.params.name as DepartmentName;
+  if (!DEPARTMENTS.includes(deptName)) {
+    res.status(400).json({ error: `Departemen "${deptName}" tidak valid.` });
+    return;
+  }
+
+  const { category, search } = req.query as Record<string, string>;
+  const deptMovs = (dbCache.departmentMovements || []).filter((m) => m.department === deptName);
+  const masterMap = new Map((dbCache.masterItems || []).map((m) => [m.id, m]));
+
+  // Find all itemIds that ever had movements in this department
+  const itemIds = Array.from(new Set(deptMovs.map((m) => m.itemId)));
+  const items: DepartmentAssetItem[] = [];
+
+  for (const itemId of itemIds) {
+    const master = masterMap.get(itemId);
+    const itemName = master ? master.itemName : 'Barang Dihapus';
+    const itemCategory = master ? master.category : ('PC ITEMS' as Category);
+    const photoUrl = master ? master.photoUrl : null;
+    const masterRemark = master ? master.remark : null;
+
+    if (category && category !== 'All' && category !== 'ALL') {
+      if (itemCategory !== category) continue;
+    }
+
+    if (search && search.trim()) {
+      const q = search.toLowerCase().trim();
+      const matchName = itemName.toLowerCase().includes(q);
+      const matchRemark = (masterRemark || '').toLowerCase().includes(q);
+      if (!matchName && !matchRemark) continue;
+    }
+
+    const itemMovs = deptMovs.filter((m) => m.itemId === itemId);
+    const transfers = itemMovs.filter((m) => m.type === 'TRANSFER_TO_DEPARTMENT');
+    const returns = itemMovs.filter((m) => m.type === 'RETURN_TO_INVENTORY');
+
+    const totalReceived = transfers.reduce((s, m) => s + (Number(m.quantity) || 0), 0);
+    const totalReturned = returns.reduce((s, m) => s + (Number(m.quantity) || 0), 0);
+    const currentUnits = Math.max(0, totalReceived - totalReturned);
+
+    // Find newest transfer for lastTransferDate & by
+    transfers.sort((a, b) => new Date(b.date || b.createdAt).getTime() - new Date(a.date || a.createdAt).getTime());
+    const lastTransfer = transfers[0] || null;
+
+    items.push({
+      itemId,
+      itemName,
+      category: itemCategory,
+      photoUrl,
+      masterRemark,
+      currentUnits,
+      totalReceived,
+      totalReturned,
+      lastTransferDate: lastTransfer ? lastTransfer.date : null,
+      lastTransferBy: lastTransfer ? lastTransfer.createdBy : null
+    });
+  }
+
+  // Sort: items with current units > 0 first, then alphabetically by itemName
+  items.sort((a, b) => {
+    if (a.currentUnits > 0 && b.currentUnits === 0) return -1;
+    if (a.currentUnits === 0 && b.currentUnits > 0) return 1;
+    return a.itemName.localeCompare(b.itemName);
+  });
+
+  const totalUnits = items.reduce((s, i) => s + i.currentUnits, 0);
+  const totalJenis = items.filter((i) => i.currentUnits > 0).length;
+
+  res.json({
+    department: deptName,
+    data: items,
+    totalUnits,
+    totalJenis
+  });
+});
+
+// 21. Transfer Asset from Inventory to Department
+app.post('/api/departments/transfer', requireAuth, (req: Request, res: Response) => {
+  const user = (req as any).user as UserAccount;
+  const { itemId, department, quantity, date, remark } = req.body;
+
+  if (!itemId) {
+    res.status(400).json({ error: 'Pilih barang yang akan ditransfer ke departemen.' });
+    return;
+  }
+
+  const masterItem = (dbCache.masterItems || []).find((m) => m.id === itemId);
+  if (!masterItem) {
+    res.status(404).json({ error: 'Master item tidak ditemukan.' });
+    return;
+  }
+
+  if (!department || !DEPARTMENTS.includes(department as DepartmentName)) {
+    res.status(400).json({ error: `Departemen tujuan "${department}" tidak valid.` });
+    return;
+  }
+
+  const parsedQty = parseInt(quantity, 10);
+  if (isNaN(parsedQty) || parsedQty <= 0) {
+    res.status(400).json({ error: 'Jumlah unit harus berupa bilangan positif (minimal 1 unit).' });
+    return;
+  }
+
+  if (!date || !date.trim()) {
+    res.status(400).json({ error: 'Tanggal transfer wajib diisi.' });
+    return;
+  }
+
+  // Stock Invariant Check: Calculate current available stock in Inventory
+  const totalInbound = (dbCache.stockTransactions || [])
+    .filter((t) => t.itemId === itemId)
+    .reduce((s, t) => s + (Number(t.quantity) || 0), 0);
+
+  const allMovements = (dbCache.departmentMovements || []).filter((m) => m.itemId === itemId);
+  const totalTransferred = allMovements
+    .filter((m) => m.type === 'TRANSFER_TO_DEPARTMENT')
+    .reduce((s, m) => s + (Number(m.quantity) || 0), 0);
+  const totalReturned = allMovements
+    .filter((m) => m.type === 'RETURN_TO_INVENTORY')
+    .reduce((s, m) => s + (Number(m.quantity) || 0), 0);
+
+  const availableStock = Math.max(0, totalInbound - totalTransferred + totalReturned);
+
+  if (parsedQty > availableStock) {
+    res.status(400).json({
+      error: `Stok inventory tidak mencukupi untuk transfer. Stok tersedia di Inventory: ${availableStock} unit. Anda meminta transfer: ${parsedQty} unit.`
+    });
+    return;
+  }
+
+  const nowIso = new Date().toISOString();
+  const movement: DepartmentMovement = {
+    id: `mov-${Date.now()}-${crypto.randomBytes(3).toString('hex')}`,
+    itemId,
+    department: department as DepartmentName,
+    type: 'TRANSFER_TO_DEPARTMENT',
+    quantity: parsedQty,
+    date: date.trim(),
+    remark: remark && remark.trim() ? remark.trim() : null,
+    createdBy: user.username,
+    createdAt: nowIso
+  };
+
+  if (!dbCache.departmentMovements) dbCache.departmentMovements = [];
+  dbCache.departmentMovements.unshift(movement);
+
+  dbCache.activities.unshift({
+    id: `act-${Date.now()}`,
+    targetId: itemId,
+    itemName: `${masterItem.itemName} (${parsedQty} Unit -> ${department})`,
+    category: masterItem.category,
+    type: 'INVENTORY',
+    action: 'Added',
+    username: user.username,
+    timestamp: nowIso
+  });
+
+  saveDB(dbCache);
+
+  res.json({
+    message: `Berhasil mentransfer ${parsedQty} unit ${masterItem.itemName} ke departemen ${department}.`,
+    movement,
+    remainingInventoryStock: availableStock - parsedQty
+  });
+});
+
+// 22. Return Asset from Department to Inventory
+app.post('/api/departments/return', requireAuth, (req: Request, res: Response) => {
+  const user = (req as any).user as UserAccount;
+  const { itemId, department, quantity, date, remark } = req.body;
+
+  if (!itemId) {
+    res.status(400).json({ error: 'Pilih barang yang akan dikembalikan ke inventory.' });
+    return;
+  }
+
+  const masterItem = (dbCache.masterItems || []).find((m) => m.id === itemId);
+  if (!masterItem) {
+    res.status(404).json({ error: 'Master item tidak ditemukan.' });
+    return;
+  }
+
+  if (!department || !DEPARTMENTS.includes(department as DepartmentName)) {
+    res.status(400).json({ error: `Departemen asal "${department}" tidak valid.` });
+    return;
+  }
+
+  const parsedQty = parseInt(quantity, 10);
+  if (isNaN(parsedQty) || parsedQty <= 0) {
+    res.status(400).json({ error: 'Jumlah unit harus berupa bilangan positif (minimal 1 unit).' });
+    return;
+  }
+
+  if (!date || !date.trim()) {
+    res.status(400).json({ error: 'Tanggal pengembalian wajib diisi.' });
+    return;
+  }
+
+  // Stock Invariant Check: Calculate current unit in this Department
+  const deptMovs = (dbCache.departmentMovements || []).filter(
+    (m) => m.department === department && m.itemId === itemId
+  );
+  const totalReceived = deptMovs
+    .filter((m) => m.type === 'TRANSFER_TO_DEPARTMENT')
+    .reduce((s, m) => s + (Number(m.quantity) || 0), 0);
+  const totalReturned = deptMovs
+    .filter((m) => m.type === 'RETURN_TO_INVENTORY')
+    .reduce((s, m) => s + (Number(m.quantity) || 0), 0);
+
+  const currentDeptStock = Math.max(0, totalReceived - totalReturned);
+
+  if (parsedQty > currentDeptStock) {
+    res.status(400).json({
+      error: `Jumlah pengembalian melebihi unit yang tersedia di ${department}. Unit saat ini: ${currentDeptStock} unit. Anda meminta pengembalian: ${parsedQty} unit.`
+    });
+    return;
+  }
+
+  const nowIso = new Date().toISOString();
+  const movement: DepartmentMovement = {
+    id: `mov-${Date.now()}-${crypto.randomBytes(3).toString('hex')}`,
+    itemId,
+    department: department as DepartmentName,
+    type: 'RETURN_TO_INVENTORY',
+    quantity: parsedQty,
+    date: date.trim(),
+    remark: remark && remark.trim() ? remark.trim() : null,
+    createdBy: user.username,
+    createdAt: nowIso
+  };
+
+  if (!dbCache.departmentMovements) dbCache.departmentMovements = [];
+  dbCache.departmentMovements.unshift(movement);
+
+  dbCache.activities.unshift({
+    id: `act-${Date.now()}`,
+    targetId: itemId,
+    itemName: `${masterItem.itemName} (${parsedQty} Unit <- ${department})`,
+    category: masterItem.category,
+    type: 'INVENTORY',
+    action: 'Edited',
+    username: user.username,
+    timestamp: nowIso
+  });
+
+  saveDB(dbCache);
+
+  res.json({
+    message: `Berhasil mengembalikan ${parsedQty} unit ${masterItem.itemName} dari departemen ${department} ke Inventory.`,
+    movement,
+    remainingDeptStock: currentDeptStock - parsedQty
+  });
+});
+
+// 23. Get Motion Analytics (Audit log across all 7 departments)
+app.get('/api/motion-analytics', requireAuth, (req: Request, res: Response) => {
+  const {
+    search,
+    department,
+    category,
+    type,
+    dateFrom,
+    dateTo,
+    page = '1',
+    limit = '50'
+  } = req.query as Record<string, string>;
+
+  const masterMap = new Map((dbCache.masterItems || []).map((m) => [m.id, m]));
+
+  const enriched: EnrichedMotionRecord[] = (dbCache.departmentMovements || []).map((m) => {
+    const master = masterMap.get(m.itemId);
+    return {
+      ...m,
+      itemName: master ? master.itemName : 'Barang Dihapus',
+      category: master ? master.category : ('PC ITEMS' as Category),
+      photoUrl: master ? master.photoUrl : null,
+      masterRemark: master ? master.remark : null
+    };
+  });
+
+  let filtered = enriched.filter((rec) => {
+    if (department && department !== 'ALL' && department !== 'All') {
+      if (rec.department !== department) return false;
+    }
+
+    if (category && category !== 'ALL' && category !== 'All') {
+      if (rec.category !== category) return false;
+    }
+
+    if (type && type !== 'ALL' && type !== 'All') {
+      if (rec.type !== type) return false;
+    }
+
+    if (search && search.trim()) {
+      const q = search.toLowerCase().trim();
+      const matchName = rec.itemName.toLowerCase().includes(q);
+      const matchDept = rec.department.toLowerCase().includes(q);
+      const matchRemark = (rec.remark || '').toLowerCase().includes(q);
+      const matchUser = rec.createdBy.toLowerCase().includes(q);
+      if (!matchName && !matchDept && !matchRemark && !matchUser) return false;
+    }
+
+    if (dateFrom && rec.date < dateFrom) return false;
+    if (dateTo && rec.date > dateTo) return false;
+
+    return true;
+  });
+
+  // Sort: newest date first, then newest createdAt
+  filtered.sort((a, b) => {
+    const dDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
+    if (dDiff !== 0) return dDiff;
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
+
+  const total = filtered.length;
+  const pageNum = parseInt(page, 10) || 1;
+  const limitNum = parseInt(limit, 10) || 50;
+  const startIndex = (pageNum - 1) * limitNum;
+  const paginated = filtered.slice(startIndex, startIndex + limitNum);
+
+  const totalTransferredUnits = filtered
+    .filter((m) => m.type === 'TRANSFER_TO_DEPARTMENT')
+    .reduce((s, m) => s + m.quantity, 0);
+  const totalReturnedUnits = filtered
+    .filter((m) => m.type === 'RETURN_TO_INVENTORY')
+    .reduce((s, m) => s + m.quantity, 0);
+
+  res.json({
+    data: paginated,
+    total,
+    page: pageNum,
+    totalPages: Math.ceil(total / limitNum) || 1,
+    summary: {
+      totalMovements: total,
+      totalTransferredUnits,
+      totalReturnedUnits
+    }
+  });
+});
+
+// 24. Get Monthly Departmental Asset Report (Historical Closing Balance)
+app.get('/api/departments/:name/monthly', requireAuth, (req: Request, res: Response) => {
+  const deptName = req.params.name as DepartmentName;
+  if (!DEPARTMENTS.includes(deptName)) {
+    res.status(400).json({ error: `Departemen "${deptName}" tidak valid.` });
+    return;
+  }
+
+  const { month, year } = req.query as Record<string, string>;
+  const parsedMonth = parseInt(month, 10) || new Date().getMonth() + 1;
+  const parsedYear = parseInt(year, 10) || new Date().getFullYear();
+
+  // Last day of selected month YYYY-MM-DD
+  const lastDayDate = new Date(parsedYear, parsedMonth, 0);
+  const lastDayStr = `${parsedYear}-${String(parsedMonth).padStart(2, '0')}-${String(lastDayDate.getDate()).padStart(2, '0')}`;
+
+  const deptMovs = (dbCache.departmentMovements || []).filter((m) => m.department === deptName);
+  const masterMap = new Map((dbCache.masterItems || []).map((m) => [m.id, m]));
+
+  const itemIds = Array.from(new Set(deptMovs.map((m) => m.itemId)));
+  const reportItems: MonthlyDepartmentalReportItem[] = [];
+
+  for (const itemId of itemIds) {
+    const master = masterMap.get(itemId);
+    const itemName = master ? master.itemName : 'Barang Dihapus';
+    const itemCategory = master ? master.category : ('PC ITEMS' as Category);
+    const photoUrl = master ? master.photoUrl : null;
+    const masterRemark = master ? master.remark : null;
+
+    const itemMovs = deptMovs.filter((m) => m.itemId === itemId);
+    const transfers = itemMovs.filter((m) => m.type === 'TRANSFER_TO_DEPARTMENT');
+    const returns = itemMovs.filter((m) => m.type === 'RETURN_TO_INVENTORY');
+
+    // Units received during selected month
+    const unitsReceivedThisMonth = transfers
+      .filter((m) => isDateRepairedInMonth(m.date, parsedMonth, parsedYear))
+      .reduce((s, m) => s + (Number(m.quantity) || 0), 0);
+
+    // Units returned during selected month
+    const unitsReturnedThisMonth = returns
+      .filter((m) => isDateRepairedInMonth(m.date, parsedMonth, parsedYear))
+      .reduce((s, m) => s + (Number(m.quantity) || 0), 0);
+
+    // Historical Closing Balance as of last day of selected month
+    const historicalTransfers = transfers
+      .filter((m) => m.date <= lastDayStr)
+      .reduce((s, m) => s + (Number(m.quantity) || 0), 0);
+    const historicalReturns = returns
+      .filter((m) => m.date <= lastDayStr)
+      .reduce((s, m) => s + (Number(m.quantity) || 0), 0);
+
+    const closingBalance = Math.max(0, historicalTransfers - historicalReturns);
+
+    // Include if had closing balance or had any movement during the month
+    if (closingBalance > 0 || unitsReceivedThisMonth > 0 || unitsReturnedThisMonth > 0) {
+      reportItems.push({
+        itemId,
+        itemName,
+        category: itemCategory,
+        photoUrl,
+        masterRemark,
+        unitsReceivedThisMonth,
+        unitsReturnedThisMonth,
+        closingBalance
+      });
+    }
+  }
+
+  // Sort by category, then itemName
+  reportItems.sort((a, b) => {
+    const cDiff = a.category.localeCompare(b.category);
+    if (cDiff !== 0) return cDiff;
+    return a.itemName.localeCompare(b.itemName);
+  });
+
+  const totalReceived = reportItems.reduce((s, i) => s + i.unitsReceivedThisMonth, 0);
+  const totalReturned = reportItems.reduce((s, i) => s + i.unitsReturnedThisMonth, 0);
+  const totalClosing = reportItems.reduce((s, i) => s + i.closingBalance, 0);
+
+  res.json({
+    department: deptName,
+    month: parsedMonth,
+    year: parsedYear,
+    data: reportItems,
+    totalReceived,
+    totalReturned,
+    totalClosing
+  });
+});
+
+// 25. Export Departmental Asset Excel
+app.get('/api/export/excel-department', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const { department, month, year } = req.query as Record<string, string>;
+    const targetDept = department && department !== 'ALL' ? (department as DepartmentName) : null;
+    const isMonthly = Boolean(month && year);
+    const parsedMonth = month ? parseInt(month, 10) : undefined;
+    const parsedYear = year ? parseInt(year, 10) : undefined;
+
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'Hotel IT Departmental Asset System';
+    workbook.created = new Date();
+
+    const deptsToExport = targetDept ? [targetDept] : DEPARTMENTS;
+
+    for (const dept of deptsToExport) {
+      const sheetName = dept.replace(/[/\\?*:[\]]/g, ' ').substring(0, 31);
+      const sheet = workbook.addWorksheet(sheetName);
+
+      sheet.views = [{ showGridLines: true }];
+
+      // Set column dimensions
+      sheet.columns = [
+        { key: 'no', width: 6 },
+        { key: 'photo', width: 14 },
+        { key: 'name', width: 32 },
+        { key: 'category', width: 20 },
+        { key: 'currentUnits', width: 16 },
+        { key: 'received', width: 16 },
+        { key: 'returned', width: 16 },
+        { key: 'lastTransfer', width: 22 },
+        { key: 'remark', width: 34 }
+      ];
+
+      // Header Banner
+      sheet.mergeCells('A1:I1');
+      const titleCell = sheet.getCell('A1');
+      titleCell.value = `HOTEL IT INVENTORY — ASSET DEPARTEMEN: ${dept.toUpperCase()}`;
+      titleCell.font = { name: 'Arial', size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
+      titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E293B' } };
+      titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+      sheet.getRow(1).height = 36;
+
+      sheet.mergeCells('A2:I2');
+      const subCell = sheet.getCell('A2');
+      subCell.value = isMonthly
+        ? `Laporan Mutasi & Saldo Bulanan: ${parsedMonth ? MONTH_NAMES[parsedMonth - 1] : ''} ${parsedYear} | Exported: ${new Date().toLocaleDateString('en-GB')}`
+        : `Status Aset Aktif & Riwayat Terpasang | Exported: ${new Date().toLocaleDateString('en-GB')}`;
+      subCell.font = { name: 'Arial', size: 10, italic: true, color: { argb: 'FF475569' } };
+      subCell.alignment = { horizontal: 'center', vertical: 'middle' };
+      sheet.getRow(2).height = 20;
+
+      // Table Header
+      const headerRow = sheet.getRow(4);
+      headerRow.values = [
+        'NO',
+        'FOTO',
+        'NAMA BARANG',
+        'KATEGORI',
+        isMonthly ? 'SALDO AKHIR' : 'UNIT SAAT INI',
+        isMonthly ? 'MASUK BULAN INI' : 'TOTAL DITERIMA',
+        isMonthly ? 'KEMBALI BULAN INI' : 'TOTAL KEMBALI',
+        'TRANSFER TERAKHIR',
+        'MASTER REMARK'
+      ];
+      headerRow.height = 26;
+      headerRow.eachCell((cell) => {
+        cell.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4338CA' } };
+        cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+        cell.border = {
+          top: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+          bottom: { style: 'medium', color: { argb: 'FF312E81' } },
+          left: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+          right: { style: 'thin', color: { argb: 'FFCBD5E1' } }
+        };
+      });
+
+      // Gather department items
+      const deptMovs = (dbCache.departmentMovements || []).filter((m) => m.department === dept);
+      const masterMap = new Map((dbCache.masterItems || []).map((m) => [m.id, m]));
+      const itemIds = Array.from(new Set(deptMovs.map((m) => m.itemId)));
+
+      let rowIdx = 5;
+      let totalUnitsSum = 0;
+      let totalRecSum = 0;
+      let totalRetSum = 0;
+
+      for (let i = 0; i < itemIds.length; i++) {
+        const itemId = itemIds[i];
+        const master = masterMap.get(itemId);
+        const itemName = master ? master.itemName : 'Barang Dihapus';
+        const itemCategory = master ? master.category : 'PC ITEMS';
+        const masterRemark = master ? master.remark || '-' : '-';
+
+        const itemMovs = deptMovs.filter((m) => m.itemId === itemId);
+        const transfers = itemMovs.filter((m) => m.type === 'TRANSFER_TO_DEPARTMENT');
+        const returns = itemMovs.filter((m) => m.type === 'RETURN_TO_INVENTORY');
+
+        let currentUnits = 0;
+        let received = 0;
+        let returned = 0;
+
+        if (isMonthly && parsedMonth && parsedYear) {
+          const lastDayDate = new Date(parsedYear, parsedMonth, 0);
+          const lastDayStr = `${parsedYear}-${String(parsedMonth).padStart(2, '0')}-${String(lastDayDate.getDate()).padStart(2, '0')}`;
+          received = transfers
+            .filter((m) => isDateRepairedInMonth(m.date, parsedMonth, parsedYear))
+            .reduce((s, m) => s + (Number(m.quantity) || 0), 0);
+          returned = returns
+            .filter((m) => isDateRepairedInMonth(m.date, parsedMonth, parsedYear))
+            .reduce((s, m) => s + (Number(m.quantity) || 0), 0);
+          const histT = transfers.filter((m) => m.date <= lastDayStr).reduce((s, m) => s + (Number(m.quantity) || 0), 0);
+          const histR = returns.filter((m) => m.date <= lastDayStr).reduce((s, m) => s + (Number(m.quantity) || 0), 0);
+          currentUnits = Math.max(0, histT - histR);
+          if (currentUnits === 0 && received === 0 && returned === 0) continue;
+        } else {
+          received = transfers.reduce((s, m) => s + (Number(m.quantity) || 0), 0);
+          returned = returns.reduce((s, m) => s + (Number(m.quantity) || 0), 0);
+          currentUnits = Math.max(0, received - returned);
+        }
+
+        transfers.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        const lastTx = transfers[0];
+        const lastTransferStr = lastTx ? `${formatDate(lastTx.date)} (${lastTx.createdBy})` : '-';
+
+        totalUnitsSum += currentUnits;
+        totalRecSum += received;
+        totalRetSum += returned;
+
+        const row = sheet.getRow(rowIdx);
+        row.values = [
+          rowIdx - 4,
+          '',
+          itemName,
+          itemCategory,
+          currentUnits,
+          received,
+          returned,
+          lastTransferStr,
+          masterRemark
+        ];
+        row.height = 40;
+
+        row.eachCell((cell, colNum) => {
+          cell.font = { name: 'Arial', size: 9 };
+          cell.border = {
+            top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+            bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+            left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+            right: { style: 'thin', color: { argb: 'FFE2E8F0' } }
+          };
+          if ([1, 4, 5, 6, 7, 8].includes(colNum)) {
+            cell.alignment = { horizontal: 'center', vertical: 'middle' };
+          } else {
+            cell.alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
+          }
+          if (colNum === 5) {
+            cell.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FF1E293B' } };
+          }
+        });
+
+        rowIdx++;
+      }
+
+      // Summary Total Row
+      const totalRow = sheet.getRow(rowIdx);
+      totalRow.values = ['TOTAL', '', '', '', totalUnitsSum, totalRecSum, totalRetSum, '', ''];
+      totalRow.height = 28;
+      sheet.mergeCells(`A${rowIdx}:D${rowIdx}`);
+      totalRow.eachCell((cell, colNum) => {
+        cell.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FF1E293B' } };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } };
+        cell.border = {
+          top: { style: 'medium', color: { argb: 'FF94A3B8' } },
+          bottom: { style: 'double', color: { argb: 'FF1E293B' } },
+          left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          right: { style: 'thin', color: { argb: 'FFE2E8F0' } }
+        };
+        if ([1, 5, 6, 7].includes(colNum)) {
+          cell.alignment = { horizontal: 'center', vertical: 'middle' };
+        }
+      });
+    }
+
+    const safeDept = targetDept ? targetDept.replace(/\s+/g, '_') : 'ALL_DEPARTMENTS';
+    const downloadFileName = `HOTEL_IT_ASSET_${safeDept}_${new Date().toISOString().split('T')[0]}.xlsx`;
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${downloadFileName}"`);
+
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (err) {
+    console.error('Department Excel export error:', err);
+    res.status(500).json({ error: 'Failed to generate Departmental Asset Excel file.' });
+  }
+});
+
+// 26. Export Motion Analytics Excel
+app.get('/api/export/excel-motion', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const { department, month, year } = req.query as Record<string, string>;
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'Hotel IT Motion Analytics';
+    workbook.created = new Date();
+
+    const sheet = workbook.addWorksheet('Motion Analytics');
+    sheet.views = [{ showGridLines: true }];
+
+    sheet.columns = [
+      { key: 'no', width: 6 },
+      { key: 'date', width: 16 },
+      { key: 'type', width: 28 },
+      { key: 'itemName', width: 32 },
+      { key: 'category', width: 20 },
+      { key: 'dept', width: 22 },
+      { key: 'qty', width: 14 },
+      { key: 'remark', width: 34 },
+      { key: 'user', width: 18 },
+      { key: 'timestamp', width: 22 }
+    ];
+
+    // Header Banner
+    sheet.mergeCells('A1:J1');
+    const titleCell = sheet.getCell('A1');
+    titleCell.value = 'HOTEL IT INVENTORY — AUDIT LOG MUTASI BARANG (MOTION ANALYTICS)';
+    titleCell.font = { name: 'Arial', size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
+    titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F172A' } };
+    titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    sheet.getRow(1).height = 36;
+
+    const masterMap = new Map((dbCache.masterItems || []).map((m) => [m.id, m]));
+    let movements = [...(dbCache.departmentMovements || [])];
+
+    if (department && department !== 'ALL' && department !== 'All') {
+      movements = movements.filter((m) => m.department === department);
+    }
+
+    if (month && year && month !== 'ALL' && month !== 'All') {
+      const pMonth = parseInt(month, 10);
+      const pYear = parseInt(year, 10);
+      movements = movements.filter((m) => isDateRepairedInMonth(m.date, pMonth, pYear));
+    }
+
+    // Sort newest date first
+    movements.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    // Table Header
+    const headerRow = sheet.getRow(3);
+    headerRow.values = [
+      'NO',
+      'TANGGAL',
+      'TIPE MUTASI',
+      'NAMA BARANG',
+      'KATEGORI',
+      'DEPARTEMEN',
+      'JUMLAH UNIT',
+      'KETERANGAN / REMARK',
+      'DICATAT OLEH',
+      'WAKTU INPUT'
+    ];
+    headerRow.height = 26;
+    headerRow.eachCell((cell) => {
+      cell.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0284C7' } };
+      cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+      cell.border = {
+        top: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+        bottom: { style: 'medium', color: { argb: 'FF0369A1' } },
+        left: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+        right: { style: 'thin', color: { argb: 'FFCBD5E1' } }
+      };
+    });
+
+    let rowIdx = 4;
+    let sumTransfers = 0;
+    let sumReturns = 0;
+
+    for (let i = 0; i < movements.length; i++) {
+      const mov = movements[i];
+      const master = masterMap.get(mov.itemId);
+      const itemName = master ? master.itemName : 'Barang Dihapus';
+      const itemCategory = master ? master.category : 'PC ITEMS';
+
+      if (mov.type === 'TRANSFER_TO_DEPARTMENT') sumTransfers += mov.quantity;
+      else if (mov.type === 'RETURN_TO_INVENTORY') sumReturns += mov.quantity;
+
+      const typeLabel = mov.type === 'TRANSFER_TO_DEPARTMENT' ? 'TRANSFER KE DEPT (+)' : 'KEMBALI KE INVENTORY (-)';
+
+      const row = sheet.getRow(rowIdx);
+      row.values = [
+        i + 1,
+        formatDate(mov.date),
+        typeLabel,
+        itemName,
+        itemCategory,
+        mov.department,
+        mov.quantity,
+        mov.remark || '-',
+        mov.createdBy,
+        formatDateTime(mov.createdAt)
+      ];
+      row.height = 24;
+
+      row.eachCell((cell, colNum) => {
+        cell.font = { name: 'Arial', size: 9 };
+        cell.border = {
+          top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          right: { style: 'thin', color: { argb: 'FFE2E8F0' } }
+        };
+        if ([1, 2, 3, 5, 6, 7, 9, 10].includes(colNum)) {
+          cell.alignment = { horizontal: 'center', vertical: 'middle' };
+        } else {
+          cell.alignment = { horizontal: 'left', vertical: 'middle' };
+        }
+
+        if (colNum === 3) {
+          if (mov.type === 'TRANSFER_TO_DEPARTMENT') {
+            cell.font = { name: 'Arial', size: 9, bold: true, color: { argb: 'FF15803D' } };
+          } else {
+            cell.font = { name: 'Arial', size: 9, bold: true, color: { argb: 'FFB45309' } };
+          }
+        }
+        if (colNum === 7) {
+          cell.font = { name: 'Arial', size: 10, bold: true };
+        }
+      });
+
+      rowIdx++;
+    }
+
+    // Total Row
+    const totalRow = sheet.getRow(rowIdx);
+    totalRow.values = [
+      'TOTAL',
+      '',
+      `Transfers: ${sumTransfers} | Returns: ${sumReturns}`,
+      '',
+      '',
+      '',
+      sumTransfers + sumReturns,
+      '',
+      '',
+      ''
+    ];
+    totalRow.height = 28;
+    sheet.mergeCells(`A${rowIdx}:B${rowIdx}`);
+    totalRow.eachCell((cell, colNum) => {
+      cell.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FF1E293B' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } };
+      cell.border = {
+        top: { style: 'medium', color: { argb: 'FF94A3B8' } },
+        bottom: { style: 'double', color: { argb: 'FF1E293B' } },
+        left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+        right: { style: 'thin', color: { argb: 'FFE2E8F0' } }
+      };
+      if ([1, 7].includes(colNum)) {
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      }
+    });
+
+    const downloadFileName = `HOTEL_IT_MOTION_ANALYTICS_${new Date().toISOString().split('T')[0]}.xlsx`;
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${downloadFileName}"`);
+
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (err) {
+    console.error('Motion Excel export error:', err);
+    res.status(500).json({ error: 'Failed to generate Motion Analytics Excel file.' });
   }
 });
 

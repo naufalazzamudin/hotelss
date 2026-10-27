@@ -11,7 +11,13 @@ import type {
   PrelovedStats,
   MasterItem,
   StockTransaction,
-  MonthlyStockTransaction
+  MonthlyStockTransaction,
+  DepartmentName,
+  DepartmentMovement,
+  EnrichedMotionRecord,
+  DepartmentAssetItem,
+  DepartmentSummary,
+  MonthlyDepartmentalReportItem
 } from './types';
 
 const TOKEN_KEY = 'hotel_it_token';
@@ -496,6 +502,159 @@ export async function downloadPrelovedExcel(filters: FilterOptions = {}): Promis
     }
   }
 
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(downloadUrl);
+}
+
+// ==========================================
+// DEPARTMENTAL ASSET & MOTION ANALYTICS API
+// ==========================================
+
+export async function fetchDepartments(): Promise<DepartmentSummary[]> {
+  const res = await request<{ data: DepartmentSummary[] }>('/api/departments');
+  return res.data;
+}
+
+export async function fetchDepartmentItems(
+  name: DepartmentName,
+  filters: { category?: string; search?: string } = {}
+): Promise<{ department: DepartmentName; data: DepartmentAssetItem[]; totalUnits: number; totalJenis: number }> {
+  const params = new URLSearchParams();
+  if (filters.category && filters.category !== 'All') params.set('category', filters.category);
+  if (filters.search) params.set('search', filters.search);
+  return request(`/api/departments/${encodeURIComponent(name)}/items?${params.toString()}`);
+}
+
+export async function transferAssetToDepartment(data: {
+  itemId: string;
+  department: DepartmentName;
+  quantity: number;
+  date: string;
+  remark?: string;
+}): Promise<{ message: string; movement: DepartmentMovement; remainingInventoryStock: number }> {
+  return request('/api/departments/transfer', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  });
+}
+
+export async function returnAssetToInventory(data: {
+  itemId: string;
+  department: DepartmentName;
+  quantity: number;
+  date: string;
+  remark?: string;
+}): Promise<{ message: string; movement: DepartmentMovement; remainingDeptStock: number }> {
+  return request('/api/departments/return', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  });
+}
+
+export async function fetchMotionAnalytics(filters: {
+  search?: string;
+  department?: string;
+  category?: string;
+  type?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  page?: number;
+  limit?: number;
+} = {}): Promise<{
+  data: EnrichedMotionRecord[];
+  total: number;
+  page: number;
+  totalPages: number;
+  summary: { totalMovements: number; totalTransferredUnits: number; totalReturnedUnits: number };
+}> {
+  const params = new URLSearchParams();
+  if (filters.search) params.set('search', filters.search);
+  if (filters.department && filters.department !== 'ALL') params.set('department', filters.department);
+  if (filters.category && filters.category !== 'ALL') params.set('category', filters.category);
+  if (filters.type && filters.type !== 'ALL') params.set('type', filters.type);
+  if (filters.dateFrom) params.set('dateFrom', filters.dateFrom);
+  if (filters.dateTo) params.set('dateTo', filters.dateTo);
+  if (filters.page) params.set('page', String(filters.page));
+  if (filters.limit) params.set('limit', String(filters.limit));
+  return request(`/api/motion-analytics?${params.toString()}`);
+}
+
+export async function fetchMonthlyDepartmental(
+  name: DepartmentName,
+  month: number,
+  year: number
+): Promise<{
+  department: DepartmentName;
+  month: number;
+  year: number;
+  data: MonthlyDepartmentalReportItem[];
+  totalReceived: number;
+  totalReturned: number;
+  totalClosing: number;
+}> {
+  return request(`/api/departments/${encodeURIComponent(name)}/monthly?month=${month}&year=${year}`);
+}
+
+export async function downloadDepartmentExcel(options: {
+  department?: string;
+  month?: number;
+  year?: number;
+} = {}): Promise<void> {
+  const params = new URLSearchParams();
+  if (options.department && options.department !== 'ALL') params.set('department', options.department);
+  if (options.month) params.set('month', String(options.month));
+  if (options.year) params.set('year', String(options.year));
+
+  const token = getStoredToken();
+  const res = await fetch(`/api/export/excel-department?${params.toString()}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {}
+  });
+  if (!res.ok) throw new Error('Failed to generate Department Excel.');
+  const blob = await res.blob();
+  const downloadUrl = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = downloadUrl;
+  const contentDisposition = res.headers.get('content-disposition');
+  let filename = 'HOTEL_IT_ASSET_DEPARTMENT.xlsx';
+  if (contentDisposition) {
+    const match = contentDisposition.match(/filename="?([^"]+)"?/);
+    if (match && match[1]) filename = match[1];
+  }
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(downloadUrl);
+}
+
+export async function downloadMotionExcel(options: {
+  department?: string;
+  month?: number;
+  year?: number;
+} = {}): Promise<void> {
+  const params = new URLSearchParams();
+  if (options.department && options.department !== 'ALL') params.set('department', options.department);
+  if (options.month) params.set('month', String(options.month));
+  if (options.year) params.set('year', String(options.year));
+
+  const token = getStoredToken();
+  const res = await fetch(`/api/export/excel-motion?${params.toString()}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {}
+  });
+  if (!res.ok) throw new Error('Failed to generate Motion Analytics Excel.');
+  const blob = await res.blob();
+  const downloadUrl = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = downloadUrl;
+  const contentDisposition = res.headers.get('content-disposition');
+  let filename = 'HOTEL_IT_MOTION_ANALYTICS.xlsx';
+  if (contentDisposition) {
+    const match = contentDisposition.match(/filename="?([^"]+)"?/);
+    if (match && match[1]) filename = match[1];
+  }
   a.download = filename;
   document.body.appendChild(a);
   a.click();

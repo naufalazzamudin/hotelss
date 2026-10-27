@@ -39,6 +39,9 @@
       "updatedBy": "ITMANAGER",
       "totalQuantity": 25,
       "quantity": 25,
+      "totalInboundQuantity": 25,
+      "totalTransferredQuantity": 0,
+      "totalReturnedQuantity": 0,
       "transactionCount": 3,
       "lastTransactionDate": "2026-10-20",
       "lastTransactionBy": "ITMANAGER",
@@ -86,6 +89,9 @@
       "updatedBy": "ITMANAGER",
       "totalQuantity": 7,
       "quantity": 7,
+      "totalInboundQuantity": 7,
+      "totalTransferredQuantity": 0,
+      "totalReturnedQuantity": 0,
       "transactionCount": 1,
       "lastTransactionDate": "2026-10-22",
       "lastTransactionBy": "ITMANAGER",
@@ -117,6 +123,9 @@
       "updatedBy": "ITASSIST",
       "totalQuantity": 1,
       "quantity": 1,
+      "totalInboundQuantity": 1,
+      "totalTransferredQuantity": 0,
+      "totalReturnedQuantity": 0,
       "transactionCount": 1,
       "lastTransactionDate": "2026-10-05",
       "lastTransactionBy": "ITMANAGER",
@@ -148,6 +157,9 @@
       "updatedBy": "ITMANAGER",
       "totalQuantity": 1,
       "quantity": 1,
+      "totalInboundQuantity": 1,
+      "totalTransferredQuantity": 0,
+      "totalReturnedQuantity": 0,
       "transactionCount": 1,
       "lastTransactionDate": "2026-08-14",
       "lastTransactionBy": "ITMANAGER",
@@ -179,6 +191,9 @@
       "updatedBy": "ITASSIST",
       "totalQuantity": 1,
       "quantity": 1,
+      "totalInboundQuantity": 1,
+      "totalTransferredQuantity": 0,
+      "totalReturnedQuantity": 0,
       "transactionCount": 1,
       "lastTransactionDate": "2026-08-20",
       "lastTransactionBy": "ITASSIST",
@@ -210,6 +225,9 @@
       "updatedBy": "ITASSIST",
       "totalQuantity": 1,
       "quantity": 1,
+      "totalInboundQuantity": 1,
+      "totalTransferredQuantity": 0,
+      "totalReturnedQuantity": 0,
       "transactionCount": 1,
       "lastTransactionDate": "2026-09-12",
       "lastTransactionBy": "ITTRAINEE",
@@ -241,6 +259,9 @@
       "updatedBy": "ITTRAINEE",
       "totalQuantity": 1,
       "quantity": 1,
+      "totalInboundQuantity": 1,
+      "totalTransferredQuantity": 0,
+      "totalReturnedQuantity": 0,
       "transactionCount": 1,
       "lastTransactionDate": "2026-10-08",
       "lastTransactionBy": "ITTRAINEE",
@@ -272,6 +293,9 @@
       "updatedBy": "ITMANAGER",
       "totalQuantity": 1,
       "quantity": 1,
+      "totalInboundQuantity": 1,
+      "totalTransferredQuantity": 0,
+      "totalReturnedQuantity": 0,
       "transactionCount": 1,
       "lastTransactionDate": "2026-08-28",
       "lastTransactionBy": "ITMANAGER",
@@ -292,6 +316,26 @@
     }
   ],
   "activities": [
+    {
+      "id": "act-1793092199481",
+      "targetId": "item-1793004125962-dd4a2b",
+      "itemName": "Access Point Ruijie RG-RAP2200(E) (1 Unit <- Front Office)",
+      "category": "NETWORK ITEMS",
+      "type": "INVENTORY",
+      "action": "Edited",
+      "username": "ITMANAGER",
+      "timestamp": "2026-10-27T09:09:59.480Z"
+    },
+    {
+      "id": "act-1793092187294",
+      "targetId": "item-1793004125962-dd4a2b",
+      "itemName": "Access Point Ruijie RG-RAP2200(E) (2 Unit -> Front Office)",
+      "category": "NETWORK ITEMS",
+      "type": "INVENTORY",
+      "action": "Added",
+      "username": "ITMANAGER",
+      "timestamp": "2026-10-27T09:09:47.293Z"
+    },
     {
       "id": "act-1793004125984",
       "targetId": "item-1793004125962-dd4a2b",
@@ -726,6 +770,30 @@
       "quantity": 1,
       "createdAt": "2026-08-28T16:00:00Z",
       "createdBy": "ITMANAGER"
+    }
+  ],
+  "departmentMovements": [
+    {
+      "id": "mov-1793092199481-f75acb",
+      "itemId": "item-1793004125962-dd4a2b",
+      "department": "Front Office",
+      "type": "RETURN_TO_INVENTORY",
+      "quantity": 1,
+      "date": "2026-10-27",
+      "remark": "Unit cadangan dikembalikan ke inventory",
+      "createdBy": "ITMANAGER",
+      "createdAt": "2026-10-27T09:09:59.480Z"
+    },
+    {
+      "id": "mov-1793092187293-5ea0a8",
+      "itemId": "item-1793004125962-dd4a2b",
+      "department": "Front Office",
+      "type": "TRANSFER_TO_DEPARTMENT",
+      "quantity": 2,
+      "date": "2026-10-27",
+      "remark": "Uji transfer awal ke Front Office",
+      "createdBy": "ITMANAGER",
+      "createdAt": "2026-10-27T09:09:47.293Z"
     }
   ]
 }

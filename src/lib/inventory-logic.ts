@@ -6,7 +6,8 @@ import type {
   MasterItem,
   StockTransaction,
   InventorySummaryItem,
-  MonthlyStockTransaction
+  MonthlyStockTransaction,
+  DepartmentMovement
 } from './types';
 
 export const MONTH_NAMES = [
@@ -188,10 +189,12 @@ export function computeStats(items: InventoryItem[], referenceDate = new Date())
 
 /**
  * Builds unified InventorySummaryItem array by combining MasterItems with their StockTransactions
+ * and taking into account DepartmentMovements (transfers and returns) to compute true available stock
  */
 export function buildInventorySummaries(
   masterItems: (MasterItem | any)[],
-  transactions: (StockTransaction | any)[]
+  transactions: (StockTransaction | any)[],
+  departmentMovements: (DepartmentMovement | any)[] = []
 ): (InventorySummaryItem & InventoryItem)[] {
   return masterItems.map((master) => {
     // Filter transactions for this item, sorted newest first
@@ -199,13 +202,24 @@ export function buildInventorySummaries(
       .filter((t) => t.itemId === master.id)
       .sort((a, b) => new Date(b.transactionDate || b.createdAt).getTime() - new Date(a.transactionDate || a.createdAt).getTime());
 
-    const totalQuantity = itemTxs.reduce((sum, t) => sum + (Number(t.quantity) || 0), 0);
+    const totalInboundQuantity = itemTxs.reduce((sum, t) => sum + (Number(t.quantity) || 0), 0);
     const transactionCount = itemTxs.length;
     const lastTx = itemTxs[0] || null;
 
+    // Filter department movements for this item
+    const itemMovements = (departmentMovements || []).filter((m) => m.itemId === master.id);
+    const totalTransferredQuantity = itemMovements
+      .filter((m) => m.type === 'TRANSFER_TO_DEPARTMENT')
+      .reduce((sum, m) => sum + (Number(m.quantity) || 0), 0);
+    const totalReturnedQuantity = itemMovements
+      .filter((m) => m.type === 'RETURN_TO_INVENTORY')
+      .reduce((sum, m) => sum + (Number(m.quantity) || 0), 0);
+
+    // Available Inventory Stock = Inbound - Transferred + Returned
+    const availableQuantity = Math.max(0, totalInboundQuantity - totalTransferredQuantity + totalReturnedQuantity);
+
     const summary: InventorySummaryItem & InventoryItem = {
       ...master,
-      // Default to master properties
       id: master.id,
       itemName: master.itemName,
       photoUrl: master.photoUrl || '',
@@ -218,8 +232,11 @@ export function buildInventorySummaries(
       updatedBy: master.updatedBy,
 
       // Summary properties
-      totalQuantity,
-      quantity: totalQuantity, // alias for components expecting quantity
+      totalQuantity: availableQuantity,
+      quantity: availableQuantity, // alias for components expecting quantity
+      totalInboundQuantity,
+      totalTransferredQuantity,
+      totalReturnedQuantity,
       transactionCount,
       lastTransactionDate: lastTx ? lastTx.transactionDate : null,
       lastTransactionBy: lastTx ? lastTx.createdBy : null,
