@@ -61,9 +61,9 @@ interface RawDB {
 }
 
 const defaultPasswords: Record<string, string> = {
-  ITMANAGER: 'syah',
-  ITASSIST: 'ihsan',
-  ITTRAINEE: 'andi'
+  ITMANAGER: 'syah123',
+  ITASSIST: 'ihsan123',
+  ITTRAINEE: 'andi123'
 };
 
 async function runMigration() {

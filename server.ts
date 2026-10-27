@@ -142,7 +142,7 @@ function initDB(): DBData {
     {
       id: 'usr-1',
       username: 'ITMANAGER',
-      passwordHash: bcrypt.hashSync('syah', salt),
+      passwordHash: bcrypt.hashSync('syah123', salt),
       role: 'IT MANAGER',
       createdAt: '2026-01-01T00:00:00Z',
       updatedAt: '2026-01-01T00:00:00Z'
@@ -150,7 +150,7 @@ function initDB(): DBData {
     {
       id: 'usr-2',
       username: 'ITASSIST',
-      passwordHash: bcrypt.hashSync('ihsan', salt),
+      passwordHash: bcrypt.hashSync('ihsan123', salt),
       role: 'IT ASSIST',
       createdAt: '2026-01-01T00:00:00Z',
       updatedAt: '2026-01-01T00:00:00Z'
@@ -158,7 +158,7 @@ function initDB(): DBData {
     {
       id: 'usr-3',
       username: 'ITTRAINEE',
-      passwordHash: bcrypt.hashSync('andi', salt),
+      passwordHash: bcrypt.hashSync('andi123', salt),
       role: 'IT TRAINEE',
       createdAt: '2026-01-01T00:00:00Z',
       updatedAt: '2026-01-01T00:00:00Z'

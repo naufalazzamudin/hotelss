@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
+    "@supabase/server": "^1.9.2",
     "@supabase/supabase-js": "^2.118.0",
     "@tailwindcss/vite": "^4.3.3",
     "@vitejs/plugin-react": "^6.1.1",
@@ -42,5 +43,11 @@
     "tailwindcss": "^4.3.3",
     "tsx": "^4.21.0",
     "typescript": "^7.0.2"
+  },
+  "allowScripts": {
+    "@firebase/util@1.15.3": true,
+    "@google/genai@2.31.0": true,
+    "esbuild@0.28.2": true,
+    "protobufjs@7.6.6": true
   }
 }
