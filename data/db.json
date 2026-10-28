@@ -3,7 +3,7 @@
     {
       "id": "usr-1",
       "username": "ITMANAGER",
-      "passwordHash": "$2b$10$yKtxL8HTB37kw1155U0sxudwIMiqGS/DZQta/u0.QMN8Q3yiAg2we",
+      "passwordHash": "$2b$10$/lq23noCHH5heaMvC4MQB.UNPzAC.8tQeSGozkaeFCd0pL2IJp5qS",
       "role": "IT MANAGER",
       "createdAt": "2026-01-01T00:00:00Z",
       "updatedAt": "2026-01-01T00:00:00Z"
@@ -11,7 +11,7 @@
     {
       "id": "usr-2",
       "username": "ITASSIST",
-      "passwordHash": "$2b$10$hrEaxVd1CMWfL.1u33QH1.A1tr2t0VwkyQt3ORHIa.siXELHU1F.W",
+      "passwordHash": "$2b$10$/lq23noCHH5heaMvC4MQB.YaxCcgHWKSC2C/t.55wgGYbxckEG0mC",
       "role": "IT ASSIST",
       "createdAt": "2026-01-01T00:00:00Z",
       "updatedAt": "2026-01-01T00:00:00Z"
@@ -19,7 +19,7 @@
     {
       "id": "usr-3",
       "username": "ITTRAINEE",
-      "passwordHash": "$2b$10$ozZcN.C.s1O/wazrNejk3uRMrtjBllgYttj/6xSd9WeeV7IIE3HtK",
+      "passwordHash": "$2b$10$/lq23noCHH5heaMvC4MQB.rCxW.xrk.QqzWbTpgBk680e864czBB2",
       "role": "IT TRAINEE",
       "createdAt": "2026-01-01T00:00:00Z",
       "updatedAt": "2026-01-01T00:00:00Z"
