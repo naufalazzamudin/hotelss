@@ -1,20 +1,1853 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Hotel IT Inventory Management</title>
-    <meta name="description" content="Modern full-stack IT department inventory management system for hotel hardware, refurbished equipment, and spare parts tracking." />
-    <meta property="og:title" content="Hotel IT Inventory Management" />
-    <meta property="og:description" content="Modern full-stack IT department inventory management system for hotel hardware, refurbished equipment, and spare parts tracking." />
-    <meta property="og:type" content="website" />
-    <meta name="twitter:card" content="summary_large_image" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  </head>
-  <body class="bg-slate-50 text-slate-800 antialiased selection:bg-indigo-500 selection:text-white font-['Plus_Jakarta_Sans',sans-serif]">
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hotel IT Inventory Management</title>
+  <meta name="description" content="Modern full-stack IT department inventory management system for hotel hardware, refurbished equipment, and spare parts tracking.">
+  <meta property="og:title" content="Hotel IT Inventory Management">
+  <meta property="og:description" content="Modern full-stack IT department inventory management system for hotel hardware, refurbished equipment, and spare parts tracking.">
+  <meta property="og:type" content="website">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <!-- FontAwesome 6 Icons via CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              200: '#c7d2fe',
+              300: '#a5b4fc',
+              400: '#818cf8',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+              800: '#3730a3',
+              900: '#312e81',
+              950: '#1e1b4b',
+            },
+            hotel: {
+              navy: '#0f172a',
+              card: '#1e293b',
+              surface: '#334155',
+              border: '#475569',
+              gold: '#f59e0b',
+              emerald: '#10b981',
+              cyan: '#06b6d4',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- SheetJS (xlsx.full.min.js) for 100% Client-Side Zero-Backend Excel Export -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <!-- Supabase JS Client SDK v2 via CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    /* Custom scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+    .glass-panel {
+      background: rgba(30, 41, 59, 0.75);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased selection:bg-brand-500 selection:text-white">
+
+  <!-- ========================================================================= -->
+  <!-- 1. LOGIN SCREEN (SUPABASE AUTH CLIENT)                                    -->
+  <!-- ========================================================================= -->
+  <div id="login-view" class="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950">
+    <div class="w-full max-w-md">
+      <!-- Brand Card -->
+      <div class="glass-panel rounded-3xl p-8 shadow-2xl border border-slate-800/80 relative overflow-hidden">
+        <div class="absolute -top-24 -right-24 w-48 h-48 bg-brand-500/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute -bottom-24 -left-24 w-48 h-48 bg-hotel-cyan/10 rounded-full blur-3xl pointer-events-none"></div>
+
+        <!-- Header -->
+        <div class="text-center mb-8 relative">
+          <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-brand-600 to-indigo-400 shadow-lg shadow-brand-500/25 mb-4 text-white text-2xl">
+            <i class="fa-solid fa-hotel"></i>
+          </div>
+          <h1 class="text-2xl font-bold tracking-tight text-white">Hotel IT Inventory</h1>
+          <p class="text-sm text-slate-400 mt-1">Management System & Hardware Control</p>
+          <div class="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-800 text-xs font-medium text-slate-300 border border-slate-700">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            Supabase BaaS Edition
+          </div>
+        </div>
+
+        <!-- Login Form -->
+        <form id="form-login" class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5" for="login-email">
+              Email Address
+            </label>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-500 pointer-events-none">
+                <i class="fa-solid fa-envelope"></i>
+              </span>
+              <input
+                type="email"
+                id="login-email"
+                required
+                placeholder="admin@hotel.com"
+                class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-900/90 border border-slate-700 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 text-white placeholder-slate-500 text-sm transition outline-none"
+              >
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5" for="login-password">
+              Password
+            </label>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-500 pointer-events-none">
+                <i class="fa-solid fa-lock"></i>
+              </span>
+              <input
+                type="password"
+                id="login-password"
+                required
+                placeholder="••••••••••••"
+                class="w-full pl-10 pr-10 py-2.5 rounded-xl bg-slate-900/90 border border-slate-700 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 text-white placeholder-slate-500 text-sm transition outline-none"
+              >
+              <button
+                type="button"
+                id="toggle-password"
+                class="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-500 hover:text-slate-300 transition"
+              >
+                <i class="fa-solid fa-eye" id="toggle-password-icon"></i>
+              </button>
+            </div>
+          </div>
+
+          <div id="login-error-alert" class="hidden p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center gap-2">
+            <i class="fa-solid fa-circle-exclamation flex-shrink-0"></i>
+            <span id="login-error-msg">Authentication failed</span>
+          </div>
+
+          <button
+            type="submit"
+            id="btn-login-submit"
+            class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-semibold text-sm shadow-lg shadow-brand-600/30 hover:shadow-brand-500/40 transition active:scale-[0.98] flex items-center justify-center gap-2"
+          >
+            <span>Sign In to Dashboard</span>
+            <i class="fa-solid fa-arrow-right text-xs"></i>
+          </button>
+
+          <!-- Quick Demo Access Bypass -->
+          <div class="pt-2">
+            <button
+              type="button"
+              id="btn-quick-demo"
+              class="w-full py-2.5 px-4 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-medium border border-slate-700 transition flex items-center justify-center gap-2"
+            >
+              <i class="fa-solid fa-bolt text-amber-400"></i>
+              <span>Direct Demo Preview (Instant Access)</span>
+            </button>
+          </div>
+        </form>
+
+        <!-- Supabase Settings Drawer Toggle -->
+        <div class="mt-6 pt-5 border-t border-slate-800 text-center">
+          <button
+            type="button"
+            id="toggle-supabase-config"
+            class="text-xs text-slate-400 hover:text-brand-400 transition inline-flex items-center gap-1.5"
+          >
+            <i class="fa-solid fa-database text-xs"></i>
+            <span>Supabase Connection Settings</span>
+            <i class="fa-solid fa-chevron-down text-[10px]" id="config-chevron"></i>
+          </button>
+
+          <!-- Collapsible Settings Panel -->
+          <div id="supabase-config-panel" class="hidden mt-4 text-left p-4 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-3">
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1" for="config-url">Supabase URL</label>
+              <input
+                type="text"
+                id="config-url"
+                placeholder="https://your-ref.supabase.co"
+                class="w-full px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-xs text-white placeholder-slate-600 outline-none focus:border-brand-500"
+              >
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1" for="config-key">Supabase Anon Key</label>
+              <input
+                type="password"
+                id="config-key"
+                placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6..."
+                class="w-full px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-xs text-white placeholder-slate-600 outline-none focus:border-brand-500"
+              >
+            </div>
+            <div class="flex items-center justify-between pt-1">
+              <span id="config-status-label" class="text-[11px] text-slate-500">Checking credentials...</span>
+              <button
+                type="button"
+                id="btn-save-config"
+                class="px-3 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-xs font-medium transition"
+              >
+                Save & Connect
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- 2. MAIN APPLICATION SHELL (AUTHENTICATED)                                 -->
+  <!-- ========================================================================= -->
+  <div id="app-shell" class="hidden min-h-screen flex flex-col bg-slate-950 text-slate-100">
+
+    <!-- Top Navigation Header -->
+    <header class="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800">
+      <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-2 sm:gap-4">
+
+        <!-- Left: Logo & Mobile Toggle -->
+        <div class="flex items-center gap-2 sm:gap-3 min-w-0">
+          <button
+            type="button"
+            id="mobile-menu-btn"
+            onclick="toggleMobileSidebar(true)"
+            aria-label="Toggle navigation menu"
+            class="md:hidden p-1.5 sm:p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition text-base"
+          >
+            <i class="fa-solid fa-bars"></i>
+          </button>
+          <div class="flex items-center gap-2 sm:gap-3 cursor-pointer min-w-0" onclick="navigateTo('dashboard')">
+            <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-400 flex items-center justify-center text-white text-sm sm:text-lg shadow-md shadow-brand-500/20 flex-shrink-0">
+              <i class="fa-solid fa-hotel"></i>
+            </div>
+            <div class="min-w-0">
+              <div class="font-bold text-white tracking-tight leading-tight text-xs sm:text-base truncate">Hotel IT System</div>
+              <div class="text-[9px] sm:text-[11px] text-slate-400 hidden xs:block truncate">Inventory & Hardware Center</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Center: Quick Counter Indicators (Desktop) -->
+        <div class="hidden lg:flex items-center gap-3">
+          <div class="flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800/80 border border-slate-700/60 text-xs">
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+            <span class="text-slate-400">Inventory Stock:</span>
+            <span class="font-bold text-white font-mono" id="header-stock-counter">0</span>
+          </div>
+          <div class="flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800/80 border border-slate-700/60 text-xs">
+            <span class="w-2 h-2 rounded-full bg-brand-400"></span>
+            <span class="text-slate-400">Dept Held:</span>
+            <span class="font-bold text-white font-mono" id="header-dept-counter">0</span>
+          </div>
+        </div>
+
+        <!-- Right: Status, User & Logout -->
+        <div class="flex items-center gap-1.5 sm:gap-2.5 flex-shrink-0">
+          <!-- Connection Indicator -->
+          <div id="header-conn-status" class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-800 border border-slate-700 text-[11px] font-medium text-slate-300">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span id="header-conn-text">Supabase Live</span>
+          </div>
+
+          <!-- User Pill -->
+          <div class="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl bg-slate-800/80 border border-slate-700/70 text-[11px] sm:text-xs text-slate-200">
+            <i class="fa-solid fa-user-shield text-brand-400 text-xs flex-shrink-0"></i>
+            <span id="current-user-email" class="max-w-[75px] xs:max-w-[110px] sm:max-w-[150px] truncate font-medium">admin@hotel.com</span>
+          </div>
+
+          <!-- Settings Button -->
+          <button
+            type="button"
+            onclick="navigateTo('settings')"
+            title="Database Connection Settings"
+            class="p-1.5 sm:p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition text-xs border border-slate-700 flex items-center justify-center"
+          >
+            <i class="fa-solid fa-gear"></i>
+          </button>
+
+          <!-- Logout Button -->
+          <button
+            type="button"
+            id="btn-logout"
+            title="Sign Out"
+            class="px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 transition text-[11px] sm:text-xs font-semibold flex items-center gap-1.5"
+          >
+            <i class="fa-solid fa-right-from-bracket text-xs"></i>
+            <span class="hidden sm:inline">Logout</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Mobile Sidebar Backdrop Overlay -->
+    <div id="mobile-sidebar-overlay" class="fixed inset-0 z-40 bg-slate-950/80 backdrop-blur-sm hidden md:hidden transition-opacity" onclick="toggleMobileSidebar(false)"></div>
+
+    <!-- Main Workspace Container -->
+    <div class="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 flex flex-col md:flex-row gap-4 sm:gap-6">
+
+      <!-- Navigation Sidebar (Slide-out drawer on mobile, static on desktop) -->
+      <aside id="app-sidebar" class="fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] bg-slate-900 border-r border-slate-800 p-4 transform -translate-x-full transition-transform duration-300 ease-in-out md:relative md:inset-auto md:z-auto md:w-64 md:translate-x-0 md:bg-transparent md:border-none md:p-0 flex-shrink-0 overflow-y-auto">
+        <div class="glass-panel rounded-2xl p-3 border border-slate-800 md:sticky md:top-24 space-y-1">
+          <!-- Mobile Drawer Header -->
+          <div class="flex items-center justify-between pb-3 mb-2 border-b border-slate-800 md:hidden">
+            <div class="flex items-center gap-2">
+              <div class="w-7 h-7 rounded-lg bg-brand-600 text-white flex items-center justify-center text-xs">
+                <i class="fa-solid fa-hotel"></i>
+              </div>
+              <span class="text-xs font-bold text-white">Hotel IT Menu</span>
+            </div>
+            <button type="button" onclick="toggleMobileSidebar(false)" class="p-1 rounded-lg text-slate-400 hover:text-white">
+              <i class="fa-solid fa-xmark text-sm"></i>
+            </button>
+          </div>
+
+          <div class="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+            Navigation Menu
+          </div>
+
+          <button
+            type="button"
+            onclick="navigateTo('dashboard')"
+            id="nav-dashboard"
+            class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800/80 transition"
+          >
+            <i class="fa-solid fa-gauge-high w-5 text-center text-brand-400"></i>
+            <span>Dashboard</span>
+          </button>
+
+          <button
+            type="button"
+            onclick="navigateTo('inventory')"
+            id="nav-inventory"
+            class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800/80 transition"
+          >
+            <i class="fa-solid fa-boxes-stacked w-5 text-center text-cyan-400"></i>
+            <span>Inventory / Stock</span>
+          </button>
+
+          <button
+            type="button"
+            onclick="navigateTo('create-item')"
+            id="nav-create-item"
+            class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800/80 transition"
+          >
+            <i class="fa-solid fa-square-plus w-5 text-center text-emerald-400"></i>
+            <span>Create Master Item</span>
+          </button>
+
+          <button
+            type="button"
+            onclick="navigateTo('departmental')"
+            id="nav-departmental"
+            class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800/80 transition"
+          >
+            <i class="fa-solid fa-sitemap w-5 text-center text-amber-400"></i>
+            <span>Departmental Asset</span>
+          </button>
+
+          <button
+            type="button"
+            onclick="navigateTo('motion')"
+            id="nav-motion"
+            class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800/80 transition"
+          >
+            <i class="fa-solid fa-arrows-rotate w-5 text-center text-purple-400"></i>
+            <span>Motion Analytics</span>
+          </button>
+
+          <div class="pt-2 border-t border-slate-800/80 my-2"></div>
+
+          <div class="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+            Procurement & Refurbish
+          </div>
+
+          <button
+            type="button"
+            onclick="navigateTo('purchase-orders')"
+            id="nav-purchase-orders"
+            class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800/80 transition"
+          >
+            <i class="fa-solid fa-file-invoice-dollar w-5 text-center text-blue-400"></i>
+            <span>Purchase Orders</span>
+          </button>
+
+          <button
+            type="button"
+            onclick="navigateTo('preloved')"
+            id="nav-preloved"
+            class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800/80 transition"
+          >
+            <i class="fa-solid fa-recycle w-5 text-center text-teal-400"></i>
+            <span>Preloved Items</span>
+          </button>
+
+          <div class="pt-2 border-t border-slate-800/80 my-2"></div>
+
+          <div class="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+            Reports & Output
+          </div>
+
+          <button
+            type="button"
+            onclick="navigateTo('monthly')"
+            id="nav-monthly"
+            class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800/80 transition"
+          >
+            <i class="fa-solid fa-calendar-days w-5 text-center text-indigo-400"></i>
+            <span>Monthly Data</span>
+          </button>
+
+          <button
+            type="button"
+            onclick="navigateTo('export-excel')"
+            id="nav-export-excel"
+            class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800/80 transition"
+          >
+            <i class="fa-solid fa-file-excel w-5 text-center text-emerald-400"></i>
+            <span>Export Excel</span>
+          </button>
+
+          <button
+            type="button"
+            onclick="navigateTo('settings')"
+            id="nav-settings"
+            class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800/80 transition"
+          >
+            <i class="fa-solid fa-sliders w-5 text-center text-slate-400"></i>
+            <span>Settings & BaaS</span>
+          </button>
+        </div>
+      </aside>
+
+      <!-- Main Dynamic Content Workspace -->
+      <main class="flex-1 min-w-0">
+
+        <!-- =================================================================== -->
+        <!-- VIEW 1: DASHBOARD                                                   -->
+        <!-- =================================================================== -->
+        <section id="view-dashboard" class="app-view space-y-6">
+          <!-- Hero Action Banner -->
+          <div class="glass-panel rounded-3xl p-6 md:p-8 border border-slate-800 relative overflow-hidden bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900">
+            <div class="max-w-2xl">
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-500/10 text-brand-300 border border-brand-500/20 text-xs font-semibold mb-3">
+                <i class="fa-solid fa-shield-halved"></i>
+                Hotel IT Operational Hub
+              </span>
+              <h2 id="hero-greeting-title" class="text-xl sm:text-2xl md:text-3xl font-extrabold text-white tracking-tight leading-snug">
+                Welcome Admin! What are we diving into today?😉
+              </h2>
+              <p class="text-xs sm:text-sm text-slate-400 mt-2 leading-relaxed">
+                Single-source-of-truth for hotel IT infrastructure. Direct sync with Supabase BaaS and client-side SheetJS exports.
+              </p>
+              <div class="mt-5 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-3">
+                <button
+                  type="button"
+                  onclick="openModalTransfer()"
+                  class="w-full sm:w-auto px-3 sm:px-4 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-semibold text-[11px] sm:text-xs shadow-lg shadow-brand-500/25 transition flex items-center justify-center gap-1.5 sm:gap-2 text-center"
+                >
+                  <i class="fa-solid fa-share-from-square text-xs"></i>
+                  <span>+ Add Dept Asset</span>
+                </button>
+                <button
+                  type="button"
+                  onclick="openModalInbound()"
+                  class="w-full sm:w-auto px-3 sm:px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold text-[11px] sm:text-xs border border-slate-700 transition flex items-center justify-center gap-1.5 sm:gap-2 text-center"
+                >
+                  <i class="fa-solid fa-box-open text-cyan-400 text-xs"></i>
+                  <span>+ Inbound Stock</span>
+                </button>
+                <button
+                  type="button"
+                  onclick="navigateTo('create-item')"
+                  class="w-full sm:w-auto px-3 sm:px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold text-[11px] sm:text-xs border border-slate-700 transition flex items-center justify-center gap-1.5 sm:gap-2 text-center"
+                >
+                  <i class="fa-solid fa-plus text-emerald-400 text-xs"></i>
+                  <span>+ Create Item</span>
+                </button>
+                <button
+                  type="button"
+                  onclick="exportFullBackupExcel()"
+                  class="w-full sm:w-auto px-3 sm:px-4 py-2.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 font-semibold text-[11px] sm:text-xs transition flex items-center justify-center gap-1.5 sm:gap-2 text-center"
+                >
+                  <i class="fa-solid fa-file-excel text-xs"></i>
+                  <span>Export All Excel</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 6 Primary Interactive Metric Cards -->
+          <div class="grid grid-cols-2 lg:grid-cols-3 gap-4">
+            <!-- 1. Available Stock -->
+            <div
+              onclick="navigateTo('inventory')"
+              class="glass-panel p-5 rounded-2xl border border-slate-800 hover:border-brand-500/50 transition cursor-pointer group"
+            >
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Inventory Stock</span>
+                <div class="w-9 h-9 rounded-xl bg-brand-500/10 text-brand-400 flex items-center justify-center group-hover:scale-110 transition">
+                  <i class="fa-solid fa-warehouse"></i>
+                </div>
+              </div>
+              <div class="mt-3 text-2xl font-bold font-mono text-white" id="stat-available-stock">0</div>
+              <div class="mt-1 text-xs text-slate-500 flex items-center justify-between">
+                <span>Available in IT Storage</span>
+                <i class="fa-solid fa-arrow-right text-[10px] text-slate-600 group-hover:text-brand-400 transition"></i>
+              </div>
+            </div>
+
+            <!-- 2. Dept Held Stock -->
+            <div
+              onclick="navigateTo('departmental')"
+              class="glass-panel p-5 rounded-2xl border border-slate-800 hover:border-amber-500/50 transition cursor-pointer group"
+            >
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Department Held</span>
+                <div class="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center group-hover:scale-110 transition">
+                  <i class="fa-solid fa-building-user"></i>
+                </div>
+              </div>
+              <div class="mt-3 text-2xl font-bold font-mono text-white" id="stat-dept-stock">0</div>
+              <div class="mt-1 text-xs text-slate-500 flex items-center justify-between">
+                <span>Across 7 Hotel Depts</span>
+                <i class="fa-solid fa-arrow-right text-[10px] text-slate-600 group-hover:text-amber-400 transition"></i>
+              </div>
+            </div>
+
+            <!-- 3. Master Items -->
+            <div
+              onclick="navigateTo('inventory')"
+              class="glass-panel p-5 rounded-2xl border border-slate-800 hover:border-cyan-500/50 transition cursor-pointer group"
+            >
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Catalog Items</span>
+                <div class="w-9 h-9 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center group-hover:scale-110 transition">
+                  <i class="fa-solid fa-layer-group"></i>
+                </div>
+              </div>
+              <div class="mt-3 text-2xl font-bold font-mono text-white" id="stat-master-items">0</div>
+              <div class="mt-1 text-xs text-slate-500 flex items-center justify-between">
+                <span>Unique SKU / Models</span>
+                <i class="fa-solid fa-arrow-right text-[10px] text-slate-600 group-hover:text-cyan-400 transition"></i>
+              </div>
+            </div>
+
+            <!-- 4. Purchase Orders -->
+            <div
+              onclick="navigateTo('purchase-orders')"
+              class="glass-panel p-5 rounded-2xl border border-slate-800 hover:border-blue-500/50 transition cursor-pointer group"
+            >
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Purchase Orders</span>
+                <div class="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center group-hover:scale-110 transition">
+                  <i class="fa-solid fa-file-invoice"></i>
+                </div>
+              </div>
+              <div class="mt-3 text-2xl font-bold font-mono text-white" id="stat-po-count">0</div>
+              <div class="mt-1 text-xs text-slate-500 flex items-center justify-between">
+                <span id="stat-po-pending">0 Pending Delivery</span>
+                <i class="fa-solid fa-arrow-right text-[10px] text-slate-600 group-hover:text-blue-400 transition"></i>
+              </div>
+            </div>
+
+            <!-- 5. Preloved Hardware -->
+            <div
+              onclick="navigateTo('preloved')"
+              class="glass-panel p-5 rounded-2xl border border-slate-800 hover:border-teal-500/50 transition cursor-pointer group"
+            >
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Preloved Items</span>
+                <div class="w-9 h-9 rounded-xl bg-teal-500/10 text-teal-400 flex items-center justify-center group-hover:scale-110 transition">
+                  <i class="fa-solid fa-recycle"></i>
+                </div>
+              </div>
+              <div class="mt-3 text-2xl font-bold font-mono text-white" id="stat-preloved-count">0</div>
+              <div class="mt-1 text-xs text-slate-500 flex items-center justify-between">
+                <span>Refurbished & Spares</span>
+                <i class="fa-solid fa-arrow-right text-[10px] text-slate-600 group-hover:text-teal-400 transition"></i>
+              </div>
+            </div>
+
+            <!-- 6. Total Movements -->
+            <div
+              onclick="navigateTo('motion')"
+              class="glass-panel p-5 rounded-2xl border border-slate-800 hover:border-purple-500/50 transition cursor-pointer group"
+            >
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Audit Movements</span>
+                <div class="w-9 h-9 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center group-hover:scale-110 transition">
+                  <i class="fa-solid fa-route"></i>
+                </div>
+              </div>
+              <div class="mt-3 text-2xl font-bold font-mono text-white" id="stat-movements-count">0</div>
+              <div class="mt-1 text-xs text-slate-500 flex items-center justify-between">
+                <span>Transfers & Returns</span>
+                <i class="fa-solid fa-arrow-right text-[10px] text-slate-600 group-hover:text-purple-400 transition"></i>
+              </div>
+            </div>
+          </div>
+
+          <!-- 7 Official Hotel Departments Grid -->
+          <div class="glass-panel rounded-2xl p-6 border border-slate-800">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                  <i class="fa-solid fa-building text-amber-400"></i>
+                  <span>7 Hotel Departments Held Asset Overview</span>
+                </h3>
+                <p class="text-xs text-slate-400 mt-0.5">Click any department card to inspect held hardware items</p>
+              </div>
+              <button
+                type="button"
+                onclick="navigateTo('departmental')"
+                class="text-xs text-brand-400 hover:text-brand-300 font-medium transition"
+              >
+                View Details &rarr;
+              </button>
+            </div>
+
+            <div id="dashboard-depts-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+              <!-- Rendered dynamically by app.js -->
+            </div>
+          </div>
+
+          <!-- Two Column Section: Category Distribution & Recent Activities -->
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Category Distribution -->
+            <div class="glass-panel rounded-2xl p-6 border border-slate-800">
+              <h3 class="text-sm font-bold text-white mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-chart-pie text-cyan-400"></i>
+                <span>Category Breakdown</span>
+              </h3>
+              <div class="space-y-4" id="dashboard-categories-container">
+                <!-- Dynamically rendered -->
+              </div>
+            </div>
+
+            <!-- Recent Activities Log -->
+            <div class="glass-panel rounded-2xl p-6 border border-slate-800 lg:col-span-2">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                  <i class="fa-solid fa-clock-rotate-left text-brand-400"></i>
+                  <span>Recent Hardware Activities</span>
+                </h3>
+                <button
+                  type="button"
+                  onclick="navigateTo('motion')"
+                  class="text-xs text-brand-400 hover:text-brand-300 font-medium"
+                >
+                  All Logs &rarr;
+                </button>
+              </div>
+              <div id="dashboard-activities-list" class="space-y-3">
+                <!-- Dynamically rendered -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- =================================================================== -->
+        <!-- VIEW 2: INVENTORY / STOCK MANAGEMENT                                -->
+        <!-- =================================================================== -->
+        <section id="view-inventory" class="app-view hidden space-y-6">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 class="text-2xl font-extrabold text-white">Master Inventory Catalog</h2>
+              <p class="text-xs text-slate-400 mt-1">
+                Unified hardware records, real-time stock balances, and department dispatching
+              </p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button
+                type="button"
+                onclick="openModalInbound()"
+                class="px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-xs shadow-md shadow-brand-500/20 transition flex items-center gap-2"
+              >
+                <i class="fa-solid fa-box-open"></i>
+                <span>+ Inbound Stock</span>
+              </button>
+              <button
+                type="button"
+                onclick="navigateTo('create-item')"
+                class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs border border-slate-700 transition flex items-center gap-2"
+              >
+                <i class="fa-solid fa-plus text-emerald-400"></i>
+                <span>+ Create Master Item</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Filter & Search Bar -->
+          <div class="glass-panel rounded-2xl p-4 border border-slate-800 flex flex-col sm:flex-row gap-3 items-center justify-between">
+            <div class="relative w-full sm:w-80">
+              <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-slate-500 text-xs"></i>
+              <input
+                type="text"
+                id="inv-search"
+                placeholder="Search item name, code, remark..."
+                oninput="renderInventoryTable()"
+                class="w-full pl-9 pr-4 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white placeholder-slate-500 outline-none focus:border-brand-500"
+              >
+            </div>
+
+            <!-- Category Pills -->
+            <div class="flex flex-wrap items-center gap-1.5 w-full sm:w-auto">
+              <button type="button" onclick="setInvCategoryFilter('ALL')" class="inv-cat-pill px-3 py-1.5 rounded-lg text-xs font-semibold bg-brand-600 text-white" data-cat="ALL">ALL</button>
+              <button type="button" onclick="setInvCategoryFilter('PC ITEMS')" class="inv-cat-pill px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white" data-cat="PC ITEMS">PC ITEMS</button>
+              <button type="button" onclick="setInvCategoryFilter('NETWORK ITEMS')" class="inv-cat-pill px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white" data-cat="NETWORK ITEMS">NETWORK ITEMS</button>
+              <button type="button" onclick="setInvCategoryFilter('CCTV & TV ITEMS')" class="inv-cat-pill px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white" data-cat="CCTV & TV ITEMS">CCTV & TV</button>
+            </div>
+          </div>
+
+          <!-- Inventory Master Table -->
+          <div class="glass-panel rounded-2xl border border-slate-800 overflow-hidden">
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs">
+                <thead class="bg-slate-900/90 text-slate-400 uppercase text-[11px] font-semibold border-b border-slate-800">
+                  <tr>
+                    <th class="py-3 px-4">Item & Code</th>
+                    <th class="py-3 px-4">Category</th>
+                    <th class="py-3 px-4 text-center">Total In</th>
+                    <th class="py-3 px-4 text-center">Transferred</th>
+                    <th class="py-3 px-4 text-center">Returned</th>
+                    <th class="py-3 px-4 text-center font-bold text-white">Stock Available</th>
+                    <th class="py-3 px-4">Status</th>
+                    <th class="py-3 px-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="inventory-table-body" class="divide-y divide-slate-800/80">
+                  <!-- Dynamically populated -->
+                </tbody>
+              </table>
+            </div>
+            <div id="inv-empty-state" class="hidden p-8 text-center text-slate-500">
+              <i class="fa-solid fa-box-open text-3xl mb-2 text-slate-600"></i>
+              <p>No inventory items found matching your filter criteria.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- =================================================================== -->
+        <!-- VIEW 3: CREATE MASTER ITEM                                          -->
+        <!-- =================================================================== -->
+        <section id="view-create-item" class="app-view hidden space-y-6">
+          <div class="max-w-2xl mx-auto">
+            <div class="glass-panel rounded-3xl p-6 md:p-8 border border-slate-800">
+              <div class="flex items-center gap-3 mb-6 pb-4 border-b border-slate-800">
+                <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-xl">
+                  <i class="fa-solid fa-square-plus"></i>
+                </div>
+                <div>
+                  <h2 class="text-xl font-bold text-white">Create Master Item</h2>
+                  <p class="text-xs text-slate-400">Tambahkan master data barang baru ke dalam katalog IT</p>
+                </div>
+              </div>
+
+              <form id="form-create-master-item" class="space-y-5">
+                <!-- 1. Nama Barang (Wajib) -->
+                <div>
+                  <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5" for="create-item-name">
+                    1. Nama Barang <span class="text-rose-400">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    id="create-item-name"
+                    required
+                    placeholder="Contoh: Dell OptiPlex 7090 Desktop Core i7"
+                    class="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white placeholder-slate-500 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none transition"
+                  >
+                </div>
+
+                <!-- 2. Kategori Barang (Wajib) -->
+                <div>
+                  <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5" for="create-item-category">
+                    2. Kategori Barang <span class="text-rose-400">*</span>
+                  </label>
+                  <select
+                    id="create-item-category"
+                    required
+                    class="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none transition"
+                  >
+                    <option value="" disabled selected>Pilih Kategori Barang</option>
+                    <option value="PC ITEMS">PC ITEMS</option>
+                    <option value="NETWORK ITEMS">NETWORK ITEMS</option>
+                    <option value="CCTV & TV ITEMS">CCTV & TV ITEMS</option>
+                  </select>
+                </div>
+
+                <!-- 3. Remark (Opsional) -->
+                <div>
+                  <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5" for="create-item-remark">
+                    3. Remark / Keterangan <span class="text-slate-500 text-[10px]">(Opsional)</span>
+                  </label>
+                  <textarea
+                    id="create-item-remark"
+                    rows="3"
+                    placeholder="Contoh: Standar spesifikasi meja Front Office, RAM 16GB, SSD 512GB..."
+                    class="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white placeholder-slate-500 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none transition resize-none"
+                  ></textarea>
+                </div>
+
+                <!-- 4. Foto Barang (Opsional) -->
+                <div>
+                  <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                    4. Foto Barang <span class="text-slate-500 text-[10px]">(Opsional - Unggah file atau URL)</span>
+                  </label>
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
+                    <div>
+                      <input
+                        type="file"
+                        id="create-item-file"
+                        accept="image/*"
+                        onchange="handleImageUploadPreview(event, 'create-item-preview')"
+                        class="block w-full text-xs text-slate-400 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-slate-200 hover:file:bg-slate-700 cursor-pointer"
+                      >
+                    </div>
+                    <div>
+                      <input
+                        type="url"
+                        id="create-item-url"
+                        placeholder="Atau tempel URL gambar..."
+                        oninput="handleImageUrlPreview(this.value, 'create-item-preview')"
+                        class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white placeholder-slate-500 outline-none focus:border-brand-500"
+                      >
+                    </div>
+                  </div>
+
+                  <!-- Image Preview Box -->
+                  <div id="create-item-preview-container" class="mt-3 hidden">
+                    <div class="relative w-32 h-32 rounded-xl overflow-hidden border border-slate-700 bg-slate-900">
+                      <img id="create-item-preview" src="" alt="Preview" class="w-full h-full object-cover">
+                      <button
+                        type="button"
+                        onclick="clearImagePreview('create-item-preview', 'create-item-preview-container')"
+                        class="absolute top-1 right-1 w-6 h-6 rounded-full bg-slate-950/80 text-white flex items-center justify-center text-xs hover:bg-rose-600 transition"
+                      >
+                        <i class="fa-solid fa-xmark"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
+                  <button
+                    type="button"
+                    onclick="navigateTo('inventory')"
+                    class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs transition"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    id="btn-submit-create-item"
+                    class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold text-xs shadow-lg shadow-emerald-500/25 transition flex items-center gap-2"
+                  >
+                    <i class="fa-solid fa-check"></i>
+                    <span>Save Master Item</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </section>
+
+        <!-- =================================================================== -->
+        <!-- VIEW 4: DEPARTMENTAL ASSET (7 DEPARTMENTS)                          -->
+        <!-- =================================================================== -->
+        <section id="view-departmental" class="app-view hidden space-y-6">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 class="text-2xl font-extrabold text-white">Departmental Asset Holdings</h2>
+              <p class="text-xs text-slate-400 mt-1">
+                Distribusi hardware aktif di 7 Departemen Hotel Resmi (Invariant Inbound - Out + Return)
+              </p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button
+                type="button"
+                onclick="openModalTransfer()"
+                class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-semibold text-xs shadow-md shadow-brand-500/20 transition flex items-center gap-2"
+              >
+                <i class="fa-solid fa-share-from-square"></i>
+                <span>+ Transfer to Dept</span>
+              </button>
+              <button
+                type="button"
+                onclick="openModalReturn()"
+                class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 font-semibold text-xs transition flex items-center gap-2"
+              >
+                <i class="fa-solid fa-arrow-rotate-left"></i>
+                <span>Return to Inventory</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- 7 Department Navigation Tabs -->
+          <div class="overflow-x-auto pb-1">
+            <div class="flex items-center gap-2 min-w-max" id="dept-tabs-bar">
+              <!-- Dynamically populated 7 depts -->
+            </div>
+          </div>
+
+          <!-- Active Dept Info Banner -->
+          <div class="glass-panel rounded-2xl p-4 border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="w-3 h-3 rounded-full bg-amber-400"></span>
+                <h3 class="text-base font-bold text-white" id="dept-active-title">Front Office</h3>
+              </div>
+              <p class="text-xs text-slate-400 mt-0.5" id="dept-active-subtitle">
+                Total 0 jenis barang, 0 unit perangkat aktif di departemen ini.
+              </p>
+            </div>
+
+            <!-- Sub Filter Kategori -->
+            <div class="flex items-center gap-1.5">
+              <button type="button" onclick="setDeptCatFilter('ALL')" class="dept-cat-pill px-3 py-1.5 rounded-lg text-xs font-semibold bg-brand-600 text-white" data-cat="ALL">ALL</button>
+              <button type="button" onclick="setDeptCatFilter('PC ITEMS')" class="dept-cat-pill px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white" data-cat="PC ITEMS">PC</button>
+              <button type="button" onclick="setDeptCatFilter('NETWORK ITEMS')" class="dept-cat-pill px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white" data-cat="NETWORK ITEMS">Network</button>
+              <button type="button" onclick="setDeptCatFilter('CCTV & TV ITEMS')" class="dept-cat-pill px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white" data-cat="CCTV & TV ITEMS">CCTV/TV</button>
+            </div>
+          </div>
+
+          <!-- Department Assets Table -->
+          <div class="glass-panel rounded-2xl border border-slate-800 overflow-hidden">
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs">
+                <thead class="bg-slate-900/90 text-slate-400 uppercase text-[11px] font-semibold border-b border-slate-800">
+                  <tr>
+                    <th class="py-3 px-4">Asset & Photo</th>
+                    <th class="py-3 px-4">Category</th>
+                    <th class="py-3 px-4 text-center font-bold text-amber-300">Held Units</th>
+                    <th class="py-3 px-4 text-center">Total Received</th>
+                    <th class="py-3 px-4 text-center">Total Returned</th>
+                    <th class="py-3 px-4">Last Recipient / PIC</th>
+                    <th class="py-3 px-4">Last Movement</th>
+                    <th class="py-3 px-4 text-right">Quick Action</th>
+                  </tr>
+                </thead>
+                <tbody id="dept-assets-table-body" class="divide-y divide-slate-800/80">
+                  <!-- Dynamically populated -->
+                </tbody>
+              </table>
+            </div>
+            <div id="dept-empty-state" class="hidden p-8 text-center text-slate-500">
+              <i class="fa-solid fa-folder-open text-3xl mb-2 text-slate-600"></i>
+              <p>Belum ada aset IT yang didistribusikan ke departemen ini.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- =================================================================== -->
+        <!-- VIEW 5: MOTION ANALYTICS                                            -->
+        <!-- =================================================================== -->
+        <section id="view-motion" class="app-view hidden space-y-6">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 class="text-2xl font-extrabold text-white">Motion Analytics & Audit Trail</h2>
+              <p class="text-xs text-slate-400 mt-1">
+                Catatan mutasi pergerakan hardware antar gudang IT dan departemen secara kronologis
+              </p>
+            </div>
+            <button
+              type="button"
+              onclick="exportMotionExcel()"
+              class="px-4 py-2.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 font-semibold text-xs transition flex items-center gap-2"
+            >
+              <i class="fa-solid fa-file-excel"></i>
+              <span>Export Motion Excel</span>
+            </button>
+          </div>
+
+          <!-- Filter Bar -->
+          <div class="glass-panel rounded-2xl p-4 border border-slate-800 grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1">Filter Motion Type</label>
+              <select id="motion-type-filter" onchange="renderMotionTable()" class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white outline-none focus:border-brand-500">
+                <option value="ALL">Semua Jenis Gerakan</option>
+                <option value="TRANSFER_TO_DEPARTMENT">TRANSFER KE DEPARTEMEN</option>
+                <option value="RETURN_TO_INVENTORY">KEMBALI KE INVENTORY</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1">Filter Department</label>
+              <select id="motion-dept-filter" onchange="renderMotionTable()" class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white outline-none focus:border-brand-500">
+                <option value="ALL">Semua 7 Departemen</option>
+                <option value="Front Office">Front Office</option>
+                <option value="House Keeping">House Keeping</option>
+                <option value="Engineering">Engineering</option>
+                <option value="Human Resource">Human Resource</option>
+                <option value="Food & Beverage">Food & Beverage</option>
+                <option value="Sales & Marketing">Sales & Marketing</option>
+                <option value="Accounting">Accounting</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1">Cari Barang / PIC</label>
+              <input
+                type="text"
+                id="motion-search"
+                placeholder="Ketik nama barang, PIC, remark..."
+                oninput="renderMotionTable()"
+                class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white placeholder-slate-500 outline-none focus:border-brand-500"
+              >
+            </div>
+          </div>
+
+          <!-- Motion Table -->
+          <div class="glass-panel rounded-2xl border border-slate-800 overflow-hidden">
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs">
+                <thead class="bg-slate-900/90 text-slate-400 uppercase text-[11px] font-semibold border-b border-slate-800">
+                  <tr>
+                    <th class="py-3 px-4">Date & Time</th>
+                    <th class="py-3 px-4">Hardware Item</th>
+                    <th class="py-3 px-4">Category</th>
+                    <th class="py-3 px-4 text-center">Movement Type</th>
+                    <th class="py-3 px-4">Department</th>
+                    <th class="py-3 px-4 text-center">Qty</th>
+                    <th class="py-3 px-4">PIC / Recipient</th>
+                    <th class="py-3 px-4">Remark / Notes</th>
+                  </tr>
+                </thead>
+                <tbody id="motion-table-body" class="divide-y divide-slate-800/80">
+                  <!-- Dynamically populated -->
+                </tbody>
+              </table>
+            </div>
+            <div id="motion-empty-state" class="hidden p-8 text-center text-slate-500">
+              <i class="fa-solid fa-arrows-rotate text-3xl mb-2 text-slate-600"></i>
+              <p>Belum ada riwayat mutasi perpindahan barang.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- =================================================================== -->
+        <!-- VIEW 6: PURCHASE ORDERS                                             -->
+        <!-- =================================================================== -->
+        <section id="view-purchase-orders" class="app-view hidden space-y-6">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 class="text-2xl font-extrabold text-white">Purchase Orders (PO)</h2>
+              <p class="text-xs text-slate-400 mt-1">
+                Pengadaan hardware baru, monitoring status kedatangan, dan histori vendor
+              </p>
+            </div>
+            <button
+              type="button"
+              onclick="openModalPO()"
+              class="px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-xs shadow-md shadow-brand-500/20 transition flex items-center gap-2"
+            >
+              <i class="fa-solid fa-plus"></i>
+              <span>+ New Purchase Order</span>
+            </button>
+          </div>
+
+          <!-- PO Filter Bar -->
+          <div class="glass-panel rounded-2xl p-4 border border-slate-800 flex flex-col sm:flex-row gap-3 items-center justify-between">
+            <div class="relative w-full sm:w-80">
+              <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-slate-500 text-xs"></i>
+              <input
+                type="text"
+                id="po-search"
+                placeholder="Search PO number, item, vendor, for use..."
+                oninput="renderPOTable()"
+                class="w-full pl-9 pr-4 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white placeholder-slate-500 outline-none focus:border-brand-500"
+              >
+            </div>
+
+            <div class="flex items-center gap-2">
+              <button type="button" onclick="setPOStatusFilter('ALL')" class="po-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-brand-600 text-white" data-status="ALL">ALL</button>
+              <button type="button" onclick="setPOStatusFilter('BELUM DATANG')" class="po-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white" data-status="BELUM DATANG">BELUM DATANG</button>
+              <button type="button" onclick="setPOStatusFilter('SUDAH DATANG')" class="po-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white" data-status="SUDAH DATANG">SUDAH DATANG</button>
+            </div>
+          </div>
+
+          <!-- PO Table -->
+          <div class="glass-panel rounded-2xl border border-slate-800 overflow-hidden">
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs">
+                <thead class="bg-slate-900/90 text-slate-400 uppercase text-[11px] font-semibold border-b border-slate-800">
+                  <tr>
+                    <th class="py-3 px-4">PO & Item Name</th>
+                    <th class="py-3 px-4">Category</th>
+                    <th class="py-3 px-4">Order Date</th>
+                    <th class="py-3 px-4">Arrival Date</th>
+                    <th class="py-3 px-4 text-center">Qty</th>
+                    <th class="py-3 px-4">For Use / Allocation</th>
+                    <th class="py-3 px-4">Status</th>
+                    <th class="py-3 px-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="po-table-body" class="divide-y divide-slate-800/80">
+                  <!-- Dynamically populated -->
+                </tbody>
+              </table>
+            </div>
+            <div id="po-empty-state" class="hidden p-8 text-center text-slate-500">
+              <i class="fa-solid fa-file-invoice text-3xl mb-2 text-slate-600"></i>
+              <p>Belum ada data purchase order yang sesuai kriteria.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- =================================================================== -->
+        <!-- VIEW 7: PRELOVED ITEMS                                              -->
+        <!-- =================================================================== -->
+        <section id="view-preloved" class="app-view hidden space-y-6">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 class="text-2xl font-extrabold text-white">Preloved & Refurbished Hardware</h2>
+              <p class="text-xs text-slate-400 mt-1">
+                Koleksi barang bekas layak pakai, spare parts rekondisi, dan ex-kamar hotel
+              </p>
+            </div>
+            <button
+              type="button"
+              onclick="openModalPreloved()"
+              class="px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-semibold text-xs shadow-md shadow-teal-500/20 transition flex items-center gap-2"
+            >
+              <i class="fa-solid fa-plus"></i>
+              <span>+ Add Preloved Item</span>
+            </button>
+          </div>
+
+          <!-- Preloved Filter Bar -->
+          <div class="glass-panel rounded-2xl p-4 border border-slate-800 flex flex-col sm:flex-row gap-3 items-center justify-between">
+            <div class="relative w-full sm:w-80">
+              <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-slate-500 text-xs"></i>
+              <input
+                type="text"
+                id="preloved-search"
+                placeholder="Search preloved name, serial number, remark..."
+                oninput="renderPrelovedTable()"
+                class="w-full pl-9 pr-4 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white placeholder-slate-500 outline-none focus:border-brand-500"
+              >
+            </div>
+
+            <!-- Preloved Category Pills -->
+            <div class="flex flex-wrap items-center gap-1.5">
+              <button type="button" onclick="setPrelovedCatFilter('ALL')" class="preloved-cat-pill px-3 py-1.5 rounded-lg text-xs font-semibold bg-brand-600 text-white" data-cat="ALL">ALL</button>
+              <button type="button" onclick="setPrelovedCatFilter('PC ITEMS')" class="preloved-cat-pill px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white" data-cat="PC ITEMS">PC</button>
+              <button type="button" onclick="setPrelovedCatFilter('NETWORK ITEMS')" class="preloved-cat-pill px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white" data-cat="NETWORK ITEMS">Network</button>
+              <button type="button" onclick="setPrelovedCatFilter('CCTV & TV ITEMS')" class="preloved-cat-pill px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white" data-cat="CCTV & TV ITEMS">CCTV/TV</button>
+            </div>
+          </div>
+
+          <!-- Preloved Table -->
+          <div class="glass-panel rounded-2xl border border-slate-800 overflow-hidden">
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs">
+                <thead class="bg-slate-900/90 text-slate-400 uppercase text-[11px] font-semibold border-b border-slate-800">
+                  <tr>
+                    <th class="py-3 px-4">Item & Code</th>
+                    <th class="py-3 px-4">Category</th>
+                    <th class="py-3 px-4">Date Repaired</th>
+                    <th class="py-3 px-4 text-center">Qty</th>
+                    <th class="py-3 px-4">Serial Number</th>
+                    <th class="py-3 px-4">Remark / Ex-Location</th>
+                    <th class="py-3 px-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="preloved-table-body" class="divide-y divide-slate-800/80">
+                  <!-- Dynamically populated -->
+                </tbody>
+              </table>
+            </div>
+            <div id="preloved-empty-state" class="hidden p-8 text-center text-slate-500">
+              <i class="fa-solid fa-recycle text-3xl mb-2 text-slate-600"></i>
+              <p>Belum ada data preloved / barang rekondisi.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- =================================================================== -->
+        <!-- VIEW 8: MONTHLY DATA & REPORTS                                      -->
+        <!-- =================================================================== -->
+        <section id="view-monthly" class="app-view hidden space-y-6">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 class="text-2xl font-extrabold text-white">Monthly Data & Audit</h2>
+              <p class="text-xs text-slate-400 mt-1">
+                Rekapitulasi berkala stok masuk, mutasi departemen, dan pengadaan per bulan
+              </p>
+            </div>
+            <div class="flex items-center gap-3">
+              <div class="flex items-center gap-2">
+                <label class="text-xs text-slate-400 font-semibold" for="monthly-selector">Bulan:</label>
+                <input
+                  type="month"
+                  id="monthly-selector"
+                  onchange="handleMonthlyChange()"
+                  class="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white outline-none focus:border-brand-500 font-mono"
+                >
+              </div>
+              <button
+                type="button"
+                onclick="exportSelectedMonthlyExcel()"
+                class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs shadow-md transition flex items-center gap-2"
+              >
+                <i class="fa-solid fa-file-excel"></i>
+                <span>Export Monthly Excel</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Monthly Sub Tabs -->
+          <div class="flex items-center gap-2 border-b border-slate-800 pb-2">
+            <button type="button" onclick="setMonthlyTab('inbound')" class="monthly-subtab px-4 py-2 rounded-xl text-xs font-semibold bg-brand-600 text-white" data-tab="inbound">
+              <i class="fa-solid fa-box-open mr-1.5"></i>Inbound Stock
+            </button>
+            <button type="button" onclick="setMonthlyTab('movements')" class="monthly-subtab px-4 py-2 rounded-xl text-xs font-semibold bg-slate-800 text-slate-400 hover:text-white" data-tab="movements">
+              <i class="fa-solid fa-share-from-square mr-1.5"></i>Dept Movements
+            </button>
+            <button type="button" onclick="setMonthlyTab('po')" class="monthly-subtab px-4 py-2 rounded-xl text-xs font-semibold bg-slate-800 text-slate-400 hover:text-white" data-tab="po">
+              <i class="fa-solid fa-file-invoice mr-1.5"></i>Purchase Orders
+            </button>
+            <button type="button" onclick="setMonthlyTab('preloved')" class="monthly-subtab px-4 py-2 rounded-xl text-xs font-semibold bg-slate-800 text-slate-400 hover:text-white" data-tab="preloved">
+              <i class="fa-solid fa-recycle mr-1.5"></i>Preloved
+            </button>
+          </div>
+
+          <!-- Monthly Content Container -->
+          <div class="glass-panel rounded-2xl border border-slate-800 overflow-hidden p-1">
+            <div id="monthly-container" class="overflow-x-auto p-4">
+              <!-- Dynamically populated table based on selected subtab -->
+            </div>
+          </div>
+        </section>
+
+        <!-- =================================================================== -->
+        <!-- VIEW 9: EXPORT EXCEL HUB                                            -->
+        <!-- =================================================================== -->
+        <section id="view-export-excel" class="app-view hidden space-y-6">
+          <div>
+            <h2 class="text-2xl font-extrabold text-white">Client-Side SheetJS Excel Export</h2>
+            <p class="text-xs text-slate-400 mt-1">
+              Download instant, 100% client-generated .xlsx files with complete column styling and proper formatting
+            </p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            <!-- 1. Master Inventory Export -->
+            <div class="glass-panel rounded-2xl p-6 border border-slate-800 hover:border-emerald-500/50 transition flex flex-col justify-between">
+              <div>
+                <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-xl mb-4">
+                  <i class="fa-solid fa-boxes-stacked"></i>
+                </div>
+                <h3 class="text-base font-bold text-white">Master Inventory Catalog</h3>
+                <p class="text-xs text-slate-400 mt-2 leading-relaxed">
+                  Semua master barang IT, total unit masuk, total ditransfer, dikembalikan, dan sisa stok aktif di gudang IT.
+                </p>
+              </div>
+              <button
+                type="button"
+                onclick="exportInventoryExcel()"
+                class="mt-6 w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs shadow-md transition flex items-center justify-center gap-2"
+              >
+                <i class="fa-solid fa-download"></i>
+                <span>Download Inventory.xlsx</span>
+              </button>
+            </div>
+
+            <!-- 2. Departmental Asset Export -->
+            <div class="glass-panel rounded-2xl p-6 border border-slate-800 hover:border-amber-500/50 transition flex flex-col justify-between">
+              <div>
+                <div class="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-400 flex items-center justify-center text-xl mb-4">
+                  <i class="fa-solid fa-building-user"></i>
+                </div>
+                <h3 class="text-base font-bold text-white">Departmental Assets</h3>
+                <p class="text-xs text-slate-400 mt-2 leading-relaxed">
+                  Daftar distribusi hardware di 7 departemen hotel: Front Office, House Keeping, Engineering, HR, F&B, Sales & Accounting.
+                </p>
+              </div>
+              <button
+                type="button"
+                onclick="exportDepartmentalExcel()"
+                class="mt-6 w-full py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs shadow-md transition flex items-center justify-center gap-2"
+              >
+                <i class="fa-solid fa-download"></i>
+                <span>Download Departmental.xlsx</span>
+              </button>
+            </div>
+
+            <!-- 3. Motion Analytics Export -->
+            <div class="glass-panel rounded-2xl p-6 border border-slate-800 hover:border-purple-500/50 transition flex flex-col justify-between">
+              <div>
+                <div class="w-12 h-12 rounded-2xl bg-purple-500/10 text-purple-400 flex items-center justify-center text-xl mb-4">
+                  <i class="fa-solid fa-arrows-rotate"></i>
+                </div>
+                <h3 class="text-base font-bold text-white">Motion Analytics Audit Trail</h3>
+                <p class="text-xs text-slate-400 mt-2 leading-relaxed">
+                  Log kronologis seluruh mutasi perpindahan barang (Transfer ke departemen & Pengembalian ke IT) lengkap dengan PIC.
+                </p>
+              </div>
+              <button
+                type="button"
+                onclick="exportMotionExcel()"
+                class="mt-6 w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs shadow-md transition flex items-center justify-center gap-2"
+              >
+                <i class="fa-solid fa-download"></i>
+                <span>Download MotionLog.xlsx</span>
+              </button>
+            </div>
+
+            <!-- 4. Purchase Orders Export -->
+            <div class="glass-panel rounded-2xl p-6 border border-slate-800 hover:border-blue-500/50 transition flex flex-col justify-between">
+              <div>
+                <div class="w-12 h-12 rounded-2xl bg-blue-500/10 text-blue-400 flex items-center justify-center text-xl mb-4">
+                  <i class="fa-solid fa-file-invoice"></i>
+                </div>
+                <h3 class="text-base font-bold text-white">Purchase Orders Record</h3>
+                <p class="text-xs text-slate-400 mt-2 leading-relaxed">
+                  Seluruh histori pengadaan barang, tanggal order, tanggal tiba, jumlah unit, alokasi peruntukan, dan status kedatangan.
+                </p>
+              </div>
+              <button
+                type="button"
+                onclick="exportPurchaseOrdersExcel()"
+                class="mt-6 w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs shadow-md transition flex items-center justify-center gap-2"
+              >
+                <i class="fa-solid fa-download"></i>
+                <span>Download PO_Report.xlsx</span>
+              </button>
+            </div>
+
+            <!-- 5. Preloved Hardware Export -->
+            <div class="glass-panel rounded-2xl p-6 border border-slate-800 hover:border-teal-500/50 transition flex flex-col justify-between">
+              <div>
+                <div class="w-12 h-12 rounded-2xl bg-teal-500/10 text-teal-400 flex items-center justify-center text-xl mb-4">
+                  <i class="fa-solid fa-recycle"></i>
+                </div>
+                <h3 class="text-base font-bold text-white">Preloved / Refurbished Items</h3>
+                <p class="text-xs text-slate-400 mt-2 leading-relaxed">
+                  Data inventaris hardware bekas, spare parts rekondisi, serial number, serta catatan asal unit (ex kamar / ex counter).
+                </p>
+              </div>
+              <button
+                type="button"
+                onclick="exportPrelovedExcel()"
+                class="mt-6 w-full py-2.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-semibold text-xs shadow-md transition flex items-center justify-center gap-2"
+              >
+                <i class="fa-solid fa-download"></i>
+                <span>Download Preloved.xlsx</span>
+              </button>
+            </div>
+
+            <!-- 6. Master All-In-One Multi-Sheet Workbook -->
+            <div class="glass-panel rounded-2xl p-6 border border-brand-500/50 bg-brand-950/20 hover:border-brand-400 transition flex flex-col justify-between">
+              <div>
+                <div class="w-12 h-12 rounded-2xl bg-brand-500/20 text-brand-300 flex items-center justify-center text-xl mb-4">
+                  <i class="fa-solid fa-file-zipper"></i>
+                </div>
+                <h3 class="text-base font-bold text-white">Full Hotel IT Master Backup</h3>
+                <p class="text-xs text-slate-300 mt-2 leading-relaxed">
+                  Export satu file workbook .xlsx komprehensif berisi seluruh lembar kerja (Sheets: Inventory, Departmental, Motion, PO, Preloved).
+                </p>
+              </div>
+              <button
+                type="button"
+                onclick="exportFullBackupExcel()"
+                class="mt-6 w-full py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-semibold text-xs shadow-lg shadow-brand-500/25 transition flex items-center justify-center gap-2"
+              >
+                <i class="fa-solid fa-cloud-arrow-down"></i>
+                <span>Download Master Backup.xlsx</span>
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- =================================================================== -->
+        <!-- VIEW 10: SETTINGS & SUPABASE BAAS CONFIG                            -->
+        <!-- =================================================================== -->
+        <section id="view-settings" class="app-view hidden space-y-6">
+          <div class="max-w-3xl mx-auto space-y-6">
+            <div>
+              <h2 class="text-2xl font-extrabold text-white">System Settings & BaaS Configuration</h2>
+              <p class="text-xs text-slate-400 mt-1">
+                Atur koneksi Supabase, periksa status sinkronisasi, dan kelola database tanpa perlu build ulang aplikasi
+              </p>
+            </div>
+
+            <!-- Connection Card -->
+            <div class="glass-panel rounded-3xl p-6 md:p-8 border border-slate-800 space-y-5">
+              <div class="flex items-center justify-between pb-4 border-b border-slate-800">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-xl bg-brand-500/10 text-brand-400 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-database"></i>
+                  </div>
+                  <div>
+                    <h3 class="text-base font-bold text-white">Supabase Credentials</h3>
+                    <p class="text-xs text-slate-400">Tersimpan secara aman di browser LocalStorage</p>
+                  </div>
+                </div>
+                <div id="settings-status-badge" class="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                  Checking...
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5" for="settings-url">
+                  Supabase Project URL
+                </label>
+                <input
+                  type="text"
+                  id="settings-url"
+                  placeholder="https://your-ref.supabase.co"
+                  class="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white placeholder-slate-500 outline-none focus:border-brand-500"
+                >
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5" for="settings-key">
+                  Supabase Anon Key (Public)
+                </label>
+                <input
+                  type="password"
+                  id="settings-key"
+                  placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6..."
+                  class="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white placeholder-slate-500 outline-none focus:border-brand-500"
+                >
+              </div>
+
+              <div class="flex flex-wrap items-center justify-between gap-3 pt-3">
+                <button
+                  type="button"
+                  onclick="resetToDefaultCredentials()"
+                  class="text-xs text-slate-400 hover:text-slate-200 transition underline"
+                >
+                  Reset to Environment Defaults
+                </button>
+                <div class="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onclick="testSupabaseConnection()"
+                    class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition"
+                  >
+                    Test Connection
+                  </button>
+                  <button
+                    type="button"
+                    onclick="saveSettingsCredentials()"
+                    class="px-5 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold shadow-md transition"
+                  >
+                    Save & Re-sync Data
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- SQL Schema Card -->
+            <div class="glass-panel rounded-3xl p-6 md:p-8 border border-slate-800 space-y-4">
+              <div class="flex items-center justify-between">
+                <div>
+                  <h3 class="text-base font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-terminal text-cyan-400"></i>
+                    <span>Database Schema Setup (Zero-RLS)</span>
+                  </h3>
+                  <p class="text-xs text-slate-400 mt-1">
+                    Salin SQL Schema ini ke Supabase Dashboard -> SQL Editor untuk menyiapkan seluruh tabel secara instan
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onclick="copySchemaSQL()"
+                  id="btn-copy-schema"
+                  class="px-3.5 py-1.5 rounded-xl bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-300 border border-cyan-500/40 text-xs font-semibold transition flex items-center gap-1.5"
+                >
+                  <i class="fa-solid fa-copy"></i>
+                  <span>Copy SQL Schema</span>
+                </button>
+              </div>
+              <div class="p-3 rounded-xl bg-slate-950 font-mono text-xs text-slate-400 overflow-x-auto max-h-48 border border-slate-800">
+                <pre id="schema-preview-text">-- Lihat file supabase-schema.sql untuk schema lengkap
+ALTER TABLE public.master_items DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.stock_transactions DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.department_movements DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.purchase_orders DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.preloved DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.activities DISABLE ROW LEVEL SECURITY;</pre>
+              </div>
+            </div>
+
+            <!-- Local Demo Data Utilities -->
+            <div class="glass-panel rounded-3xl p-6 md:p-8 border border-slate-800 flex items-center justify-between">
+              <div>
+                <h3 class="text-sm font-bold text-white">Reset Local Cache & Re-seed Demo Data</h3>
+                <p class="text-xs text-slate-400 mt-0.5">Muat ulang data demo standar hotel IT jika ingin mereset state lokal</p>
+              </div>
+              <button
+                type="button"
+                onclick="reloadDemoDataSeed()"
+                class="px-4 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-semibold transition"
+              >
+                Reset Demo Data
+              </button>
+            </div>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODALS                                                                    -->
+  <!-- ========================================================================= -->
+
+  <!-- Modal: Inbound Stock (Penambahan Unit) -->
+  <div id="modal-inbound" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+    <div class="glass-panel rounded-2xl max-w-lg w-full p-6 border border-slate-700 shadow-2xl">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-box-open text-cyan-400"></i>
+          <span>Inbound Stock (Penambahan Unit)</span>
+        </h3>
+        <button type="button" onclick="closeModal('modal-inbound')" class="text-slate-400 hover:text-white">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form id="form-inbound" class="space-y-4 mt-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1" for="inbound-item-id">Pilih Master Barang <span class="text-rose-400">*</span></label>
+          <select id="inbound-item-id" required class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:border-brand-500 outline-none">
+            <!-- Dynamically populated from master items -->
+          </select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 mb-1" for="inbound-qty">Jumlah Unit (Qty) <span class="text-rose-400">*</span></label>
+            <input type="number" id="inbound-qty" required min="1" value="1" class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white font-mono focus:border-brand-500 outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 mb-1" for="inbound-date">Tanggal Masuk <span class="text-rose-400">*</span></label>
+            <input type="date" id="inbound-date" required class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white font-mono focus:border-brand-500 outline-none">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1" for="inbound-remark">Remark / Catatan Inbound</label>
+          <textarea id="inbound-remark" rows="2" placeholder="Contoh: Batch pengadaan baru Q4, PO #12345..." class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white placeholder-slate-500 focus:border-brand-500 outline-none resize-none"></textarea>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
+          <button type="button" onclick="closeModal('modal-inbound')" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold hover:bg-slate-700">Batal</button>
+          <button type="submit" class="px-5 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold shadow-md">Simpan Inbound</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Transfer Asset to Department -->
+  <div id="modal-transfer" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+    <div class="glass-panel rounded-2xl max-w-lg w-full p-6 border border-slate-700 shadow-2xl">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-share-from-square text-brand-400"></i>
+          <span>Transfer Asset to Department</span>
+        </h3>
+        <button type="button" onclick="closeModal('modal-transfer')" class="text-slate-400 hover:text-white">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form id="form-transfer" class="space-y-4 mt-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1" for="transfer-item-id">Pilih Master Barang <span class="text-rose-400">*</span></label>
+          <select id="transfer-item-id" required onchange="updateTransferAvailableStock()" class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:border-brand-500 outline-none">
+            <!-- Dynamically populated with available stock badges -->
+          </select>
+          <div id="transfer-stock-hint" class="text-[11px] text-brand-400 mt-1 font-medium">Stok Tersedia: 0 unit</div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1" for="transfer-department">Tujuan Departemen <span class="text-rose-400">*</span></label>
+          <select id="transfer-department" required class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:border-brand-500 outline-none">
+            <option value="Front Office">Front Office</option>
+            <option value="House Keeping">House Keeping</option>
+            <option value="Engineering">Engineering</option>
+            <option value="Human Resource">Human Resource</option>
+            <option value="Food & Beverage">Food & Beverage</option>
+            <option value="Sales & Marketing">Sales & Marketing</option>
+            <option value="Accounting">Accounting</option>
+          </select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 mb-1" for="transfer-qty">Jumlah Unit (Qty) <span class="text-rose-400">*</span></label>
+            <input type="number" id="transfer-qty" required min="1" value="1" class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white font-mono focus:border-brand-500 outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 mb-1" for="transfer-date">Tanggal Handover <span class="text-rose-400">*</span></label>
+            <input type="date" id="transfer-date" required class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white font-mono focus:border-brand-500 outline-none">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1" for="transfer-recipient">Nama Penerima / PIC Departemen <span class="text-rose-400">*</span></label>
+          <input type="text" id="transfer-recipient" required placeholder="Contoh: Budi Santoso (Duty Manager)" class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:border-brand-500 outline-none">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1" for="transfer-remark">Keterangan / Alokasi Penempatan</label>
+          <textarea id="transfer-remark" rows="2" placeholder="Contoh: Untuk Counter Receptionist 1-3..." class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white placeholder-slate-500 focus:border-brand-500 outline-none resize-none"></textarea>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
+          <button type="button" onclick="closeModal('modal-transfer')" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold hover:bg-slate-700">Batal</button>
+          <button type="submit" class="px-5 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold shadow-md">Kirim Transfer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Return Asset to Inventory -->
+  <div id="modal-return" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+    <div class="glass-panel rounded-2xl max-w-lg w-full p-6 border border-slate-700 shadow-2xl">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-arrow-rotate-left text-amber-400"></i>
+          <span>Return Asset to IT Inventory</span>
+        </h3>
+        <button type="button" onclick="closeModal('modal-return')" class="text-slate-400 hover:text-white">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form id="form-return" class="space-y-4 mt-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1" for="return-department">Dari Departemen <span class="text-rose-400">*</span></label>
+          <select id="return-department" required onchange="updateReturnItemOptions()" class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:border-brand-500 outline-none">
+            <option value="Front Office">Front Office</option>
+            <option value="House Keeping">House Keeping</option>
+            <option value="Engineering">Engineering</option>
+            <option value="Human Resource">Human Resource</option>
+            <option value="Food & Beverage">Food & Beverage</option>
+            <option value="Sales & Marketing">Sales & Marketing</option>
+            <option value="Accounting">Accounting</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1" for="return-item-id">Pilih Barang yang Dikembalikan <span class="text-rose-400">*</span></label>
+          <select id="return-item-id" required onchange="updateReturnAvailableStock()" class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:border-brand-500 outline-none">
+            <!-- Dynamically populated from active dept held items -->
+          </select>
+          <div id="return-stock-hint" class="text-[11px] text-amber-400 mt-1 font-medium">Unit dipegang departemen: 0 unit</div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 mb-1" for="return-qty">Jumlah Unit Dikembalikan <span class="text-rose-400">*</span></label>
+            <input type="number" id="return-qty" required min="1" value="1" class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white font-mono focus:border-brand-500 outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 mb-1" for="return-date">Tanggal Pengembalian <span class="text-rose-400">*</span></label>
+            <input type="date" id="return-date" required class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white font-mono focus:border-brand-500 outline-none">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1" for="return-remark">Alasan / Catatan Pengembalian</label>
+          <textarea id="return-remark" rows="2" placeholder="Contoh: Unit rusak ringan perlu servis IT, atau kelebihan unit..." class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white placeholder-slate-500 focus:border-brand-500 outline-none resize-none"></textarea>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
+          <button type="button" onclick="closeModal('modal-return')" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold hover:bg-slate-700">Batal</button>
+          <button type="submit" class="px-5 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold shadow-md">Kembalikan ke Stok</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Purchase Order Form -->
+  <div id="modal-po" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+    <div class="glass-panel rounded-2xl max-w-lg w-full p-6 border border-slate-700 shadow-2xl">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-file-invoice text-blue-400"></i>
+          <span id="po-modal-title">New Purchase Order</span>
+        </h3>
+        <button type="button" onclick="closeModal('modal-po')" class="text-slate-400 hover:text-white">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form id="form-po" class="space-y-4 mt-4">
+        <input type="hidden" id="po-edit-id">
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1" for="po-item-name">Nama Barang PO <span class="text-rose-400">*</span></label>
+          <input type="text" id="po-item-name" required placeholder="Contoh: Keyboard Wireless Logitech MK270" class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:border-brand-500 outline-none">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 mb-1" for="po-category">Kategori <span class="text-rose-400">*</span></label>
+            <select id="po-category" required class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:border-brand-500 outline-none">
+              <option value="PC ITEMS">PC ITEMS</option>
+              <option value="NETWORK ITEMS">NETWORK ITEMS</option>
+              <option value="CCTV & TV ITEMS">CCTV & TV ITEMS</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 mb-1" for="po-qty">Quantity <span class="text-rose-400">*</span></label>
+            <input type="number" id="po-qty" required min="1" value="1" class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white font-mono focus:border-brand-500 outline-none">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 mb-1" for="po-date-order">Tanggal Order <span class="text-rose-400">*</span></label>
+            <input type="date" id="po-date-order" required class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white font-mono focus:border-brand-500 outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 mb-1" for="po-status">Status Kedatangan <span class="text-rose-400">*</span></label>
+            <select id="po-status" required class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:border-brand-500 outline-none">
+              <option value="BELUM DATANG">BELUM DATANG</option>
+              <option value="SUDAH DATANG">SUDAH DATANG</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1" for="po-for-use">Peruntukan / For Use <span class="text-rose-400">*</span></label>
+          <input type="text" id="po-for-use" required placeholder="Contoh: Stok Pengganti Front Office & Executive Office" class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:border-brand-500 outline-none">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1" for="po-vendor">Nama Vendor / Toko</label>
+          <input type="text" id="po-vendor" placeholder="Contoh: Surya Komputer Jakarta" class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:border-brand-500 outline-none">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1" for="po-remarks">Catatan / Remarks</label>
+          <textarea id="po-remarks" rows="2" placeholder="Nomor resi, garansi, atau catatan tambahan..." class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white placeholder-slate-500 focus:border-brand-500 outline-none resize-none"></textarea>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
+          <button type="button" onclick="closeModal('modal-po')" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold hover:bg-slate-700">Batal</button>
+          <button type="submit" class="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-md">Simpan PO</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Preloved Item Form -->
+  <div id="modal-preloved" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+    <div class="glass-panel rounded-2xl max-w-lg w-full p-6 border border-slate-700 shadow-2xl">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-recycle text-teal-400"></i>
+          <span id="preloved-modal-title">Add Preloved Hardware</span>
+        </h3>
+        <button type="button" onclick="closeModal('modal-preloved')" class="text-slate-400 hover:text-white">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form id="form-preloved" class="space-y-4 mt-4">
+        <input type="hidden" id="preloved-edit-id">
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1" for="preloved-item-name">Nama Barang Rekondisi <span class="text-rose-400">*</span></label>
+          <input type="text" id="preloved-item-name" required placeholder="Contoh: HP ProDesk 400 G4 Desktop (Refurbished)" class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:border-brand-500 outline-none">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 mb-1" for="preloved-category">Kategori <span class="text-rose-400">*</span></label>
+            <select id="preloved-category" required class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:border-brand-500 outline-none">
+              <option value="PC ITEMS">PC ITEMS</option>
+              <option value="NETWORK ITEMS">NETWORK ITEMS</option>
+              <option value="CCTV & TV ITEMS">CCTV & TV ITEMS</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 mb-1" for="preloved-qty">Quantity <span class="text-rose-400">*</span></label>
+            <input type="number" id="preloved-qty" required min="1" value="1" class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white font-mono focus:border-brand-500 outline-none">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 mb-1" for="preloved-date">Tanggal Dibereskan <span class="text-rose-400">*</span></label>
+            <input type="date" id="preloved-date" required class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white font-mono focus:border-brand-500 outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 mb-1" for="preloved-serial">Serial Number</label>
+            <input type="text" id="preloved-serial" placeholder="SN-12345678" class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:border-brand-500 outline-none">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1" for="preloved-remark">Remark (Ex-Location / Kondisi)</label>
+          <textarea id="preloved-remark" rows="2" placeholder="Contoh: Ex Front Office counter. RAM upgraded to 16GB, SSD 256GB baru..." class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white placeholder-slate-500 focus:border-brand-500 outline-none resize-none"></textarea>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
+          <button type="button" onclick="closeModal('modal-preloved')" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold hover:bg-slate-700">Batal</button>
+          <button type="submit" class="px-5 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-xs font-semibold shadow-md">Simpan Preloved</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Image Lightbox Preview -->
+  <div id="modal-lightbox" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md" onclick="closeModal('modal-lightbox')">
+    <div class="relative max-w-2xl max-h-[85vh] p-2" onclick="event.stopPropagation()">
+      <button type="button" onclick="closeModal('modal-lightbox')" class="absolute -top-10 right-0 text-white hover:text-slate-300 text-2xl">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+      <img id="lightbox-img" src="" alt="Hardware View" class="max-w-full max-h-[80vh] rounded-2xl object-contain shadow-2xl border border-slate-700">
+      <div id="lightbox-caption" class="text-center text-xs text-slate-300 mt-2 font-medium"></div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm pointer-events-none"></div>
+
+  <!-- Application Logic (Vanilla JS) -->
+  <script src="/app.js"></script>
+</body>
 </html>

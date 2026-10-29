@@ -1,0 +1,6 @@
+server.ts
+node_modules
+data
+scripts
+.env
+.env.local
